@@ -129,8 +129,11 @@ else
         if docker buildx version &> /dev/null 2>&1; then
             USE_BUILDX=true
         else
-            print_warn "Multi-platform build requested but buildx not available"
-            print_warn "Will attempt standard build with --platform flag"
+            print_error "Multi-platform build requested but buildx not available"
+            print_error "Standard Docker build does not support multiple platforms"
+            print_error "Please install Docker buildx or specify a single platform with -l"
+            print_error "Example: $0 -l linux/amd64"
+            exit 1
         fi
     fi
 fi

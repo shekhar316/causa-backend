@@ -270,7 +270,7 @@ postgresql://causa_backend:PASSWORD@diagnostics-tool-db-rw.diagnostics-tool.svc.
 jdbc:postgresql://diagnostics-tool-db-rw.diagnostics-tool.svc.cluster.local:5432/diagnostics-tool-db
 ```
 
-## Files Structure
+## Directory Structure
 
 ```
 deployment/

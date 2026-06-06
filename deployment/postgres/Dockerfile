@@ -28,6 +28,8 @@ RUN echo "Verifying pgvector installation..." && \
 RUN chgrp -R 0 /var/lib/postgresql /var/run/postgresql && \
     chmod -R g=u /var/lib/postgresql /var/run/postgresql
 
+# Switch back to non-root user for security
+USER postgres
 
 # Expose PostgreSQL port
 EXPOSE 5432

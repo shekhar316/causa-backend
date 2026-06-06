@@ -11,14 +11,40 @@ NC='\033[0m'
 # Defaults
 DEFAULT_IMAGE="quay.io/rh-ee-shesaxen/postgres-pgvector:17"
 DEFAULT_OPERATOR_VERSION="1.29.1"
+DEFAULT_OPERATOR_RELEASE_BRANCH="release-1.29"
 DEFAULT_CLUSTER_TYPE="kind"
 NAMESPACE="diagnostics-tool"
 
 # Variables
 IMAGE_NAME="${IMAGE_NAME:-$DEFAULT_IMAGE}"
 OPERATOR_VERSION="${OPERATOR_VERSION:-$DEFAULT_OPERATOR_VERSION}"
+OPERATOR_RELEASE_BRANCH="${OPERATOR_RELEASE_BRANCH:-$DEFAULT_OPERATOR_RELEASE_BRANCH}"
 CLUSTER_TYPE="${CLUSTER_TYPE:-$DEFAULT_CLUSTER_TYPE}"
 TERMINATE_MODE=false
+
+# Validate operator version matches release branch
+validate_operator_version() {
+    local version="$1"
+    local branch="$2"
+    
+    # Extract major.minor from version (e.g., "1.29.1" -> "1.29")
+    local version_major_minor
+    version_major_minor=$(echo "$version" | awk -F. '{print $1"."$2}')
+    
+    # Extract major.minor from branch (e.g., "release-1.29" -> "1.29")
+    local branch_major_minor
+    branch_major_minor=$(echo "$branch" | sed 's/release-//')
+    
+    if [ "$version_major_minor" != "$branch_major_minor" ]; then
+        print_error "Operator version mismatch!"
+        print_error "  OPERATOR_VERSION: $version (major.minor: $version_major_minor)"
+        print_error "  OPERATOR_RELEASE_BRANCH: $branch (expected: release-$version_major_minor)"
+        print_error ""
+        print_error "The operator version must match the release branch."
+        print_error "For version $version, use OPERATOR_RELEASE_BRANCH=release-$version_major_minor"
+        exit 1
+    fi
+}
 
 # Print functions
 print_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -43,6 +69,11 @@ Options:
   -t          Terminate mode - remove all PostgreSQL and operator resources
   -h          Show this help
 
+Environment Variables:
+  OPERATOR_VERSION          CloudNativePG operator version (default: $DEFAULT_OPERATOR_VERSION)
+  OPERATOR_RELEASE_BRANCH   Release branch (default: $DEFAULT_OPERATOR_RELEASE_BRANCH)
+                            Must match the version's major.minor (e.g., release-1.29 for 1.29.x)
+
 Examples:
   # Deploy on Kind cluster
   $0 -c kind
@@ -53,8 +84,17 @@ Examples:
   # Deploy with custom image
   $0 -c kind -i quay.io/myorg/postgres-pgvector:17
 
+  # Deploy with specific operator version (branch auto-validated)
+  OPERATOR_VERSION=1.29.2 $0 -c kind
+
+  # Deploy with different operator version line
+  OPERATOR_VERSION=1.30.0 OPERATOR_RELEASE_BRANCH=release-1.30 $0 -c kind
+
   # Terminate everything
   $0 -t
+
+Note: The script validates that OPERATOR_VERSION matches OPERATOR_RELEASE_BRANCH
+      to prevent 404 errors from version/branch mismatches.
 
 EOF
     exit "${1:-0}"
@@ -93,6 +133,11 @@ fi
 print_info "✓ Connected to cluster"
 echo ""
 
+# Validate operator version matches release branch (skip in terminate mode)
+if [ "$TERMINATE_MODE" = false ]; then
+    validate_operator_version "$OPERATOR_VERSION" "$OPERATOR_RELEASE_BRANCH"
+fi
+
 # Handle terminate mode
 if [ "$TERMINATE_MODE" = true ]; then
     print_header "Terminate Mode - Cleaning Up PostgreSQL Resources"
@@ -119,7 +164,7 @@ if [ "$TERMINATE_MODE" = true ]; then
         kubectl delete csv -n openshift-operators -l operators.coreos.com/cloudnative-pg.openshift-operators --ignore-not-found=true
     else
         # Delete direct installation
-        OPERATOR_URL="https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.29/releases/cnpg-${OPERATOR_VERSION}.yaml"
+        OPERATOR_URL="https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/${OPERATOR_RELEASE_BRANCH}/releases/cnpg-${OPERATOR_VERSION}.yaml"
         kubectl delete -f "${OPERATOR_URL}" --ignore-not-found=true --wait=false
     fi
     
@@ -197,7 +242,7 @@ else
     # Kind/Kubernetes: Use direct manifest installation
     print_info "Installing operator v${OPERATOR_VERSION} for Kind..."
     
-    OPERATOR_URL="https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.29/releases/cnpg-${OPERATOR_VERSION}.yaml"
+    OPERATOR_URL="https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/${OPERATOR_RELEASE_BRANCH}/releases/cnpg-${OPERATOR_VERSION}.yaml"
     
     # Check if operator already exists and cleanup if needed
     if kubectl get namespace cnpg-system &> /dev/null; then

@@ -1,5 +1,6 @@
 package com.causa.core.services;
 
+import com.causa.common.constants.ModelType;
 import com.causa.config.LLMConfig;
 import com.causa.core.domain.Alert;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,25 +19,6 @@ import jakarta.inject.Inject;
  */
 @ApplicationScoped
 public class RcaPromptBuilder {
-
-    /**
-     * Enum representing supported LLM model types for template selection.
-     */
-    public enum ModelType {
-        VERTEX_AI_ANTHROPIC("vertex-ai-anthropic"),
-        DIRECT_ANTHROPIC("direct-anthropic"),
-        BOB("bob");
-
-        private final String templateName;
-
-        ModelType(String templateName) {
-            this.templateName = templateName;
-        }
-
-        public String getTemplateName() {
-            return templateName;
-        }
-    }
 
     private final PromptTemplateLoader templateLoader;
     private final LLMConfig llmConfig;
@@ -93,22 +75,6 @@ public class RcaPromptBuilder {
      * @return the ModelType enum
      */
     private ModelType determineModelType(String provider, String modelName) {
-        // Check for Bob/Granite models (IBM BAM)
-        if (modelName != null && (modelName.toLowerCase().contains("bob") ||
-            modelName.toLowerCase().contains("granite"))) {
-            return ModelType.BOB;
-        }
-
-        // Check provider type
-        if ("vertex-ai-anthropic".equalsIgnoreCase(provider)) {
-            return ModelType.VERTEX_AI_ANTHROPIC;
-        }
-
-        if ("anthropic".equalsIgnoreCase(provider)) {
-            return ModelType.DIRECT_ANTHROPIC;
-        }
-
-        // Default to vertex-ai-anthropic
-        return ModelType.VERTEX_AI_ANTHROPIC;
+        return ModelType.from(provider, modelName);
     }
 }

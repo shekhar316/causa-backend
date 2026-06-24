@@ -19,11 +19,14 @@ import com.causa.mcp.McpContextCollector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Set;
 
 /**
  * Diagnostic Service Implementation
@@ -43,6 +46,7 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     private final PromptSender promptSender;
     private final LLMConfig llmConfig;
     private final ObjectMapper objectMapper;
+    private final Validator validator;
 
     @Inject
     public DiagnosticServiceImpl(DiagnosticRepository diagnosticRepository,
@@ -50,13 +54,15 @@ public class DiagnosticServiceImpl implements DiagnosticService {
                                   RcaPromptBuilder rcaPromptBuilder,
                                   PromptSender promptSender,
                                   LLMConfig llmConfig,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper,
+                                  Validator validator) {
         this.diagnosticRepository = diagnosticRepository;
         this.mcpContextCollector = mcpContextCollector;
         this.rcaPromptBuilder = rcaPromptBuilder;
         this.promptSender = promptSender;
         this.llmConfig = llmConfig;
         this.objectMapper = objectMapper;
+        this.validator = validator;
     }
 
     @Override
@@ -248,7 +254,21 @@ public class DiagnosticServiceImpl implements DiagnosticService {
         jsonText = jsonText.trim();
 
         // Parse JSON to RootCauseAnalysis
-        return objectMapper.readValue(jsonText, RootCauseAnalysis.class);
+        RootCauseAnalysis rca = objectMapper.readValue(jsonText, RootCauseAnalysis.class);
+
+        // Validate the deserialized object
+        // Note: Jackson deserialization does NOT trigger Bean Validation annotations automatically
+        Set<ConstraintViolation<RootCauseAnalysis>> violations = validator.validate(rca);
+        if (!violations.isEmpty()) {
+            StringBuilder errorMsg = new StringBuilder("RCA validation failed:");
+            for (ConstraintViolation<RootCauseAnalysis> violation : violations) {
+                errorMsg.append("\n  - ").append(violation.getPropertyPath())
+                        .append(": ").append(violation.getMessage());
+            }
+            throw new IllegalArgumentException(errorMsg.toString());
+        }
+
+        return rca;
     }
 
     /**

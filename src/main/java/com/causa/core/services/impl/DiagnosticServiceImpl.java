@@ -1,5 +1,6 @@
 package com.causa.core.services.impl;
 
+import com.causa.common.constants.DiagnosticConstants;
 import com.causa.common.constants.DiagnosticConstants.DiagnosticStatus;
 import com.causa.common.constants.JsonParsingConstants;
 import com.causa.common.logging.CausaLogger;
@@ -114,8 +115,8 @@ public class DiagnosticServiceImpl implements DiagnosticService {
         // Collect context from MCP servers
         String contextString = mcpContextCollector.collectContextAsString(alert);
 
-        log.debug("LLM context built")
-            .field("alertId", alert.getAlertId())
+        log.debug(LogMessages.Diagnostic.LLM_CONTEXT_BUILT)
+            .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
             .field("contextLength", contextString.length())
             .log();
 
@@ -158,8 +159,8 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             String systemPrompt = rcaPromptBuilder.getSystemPrompt();
             String userPrompt = rcaPromptBuilder.buildPrompt(alert, contextString);
 
-            log.info("RCA prompt built")
-                .field("alertId", alert.getAlertId())
+            log.info(LogMessages.Diagnostic.RCA_PROMPT_BUILT)
+                .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
                 .field("systemPromptLength", systemPrompt.length())
                 .field("userPromptLength", userPrompt.length())
                 .log();
@@ -181,8 +182,8 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             // Call the LLM (works with both LangChain and BobShell)
             LLMResponse llmResponse = promptSender.send(llmRequest);
 
-            log.info("LLM response received")
-                .field("alertId", alert.getAlertId())
+            log.info(LogMessages.Diagnostic.LLM_RESPONSE_RECEIVED)
+                .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
                 .field("modelUsed", llmResponse.modelUsed())
                 .field("inputTokens", llmResponse.inputTokens())
                 .field("outputTokens", llmResponse.outputTokens())
@@ -199,8 +200,8 @@ public class DiagnosticServiceImpl implements DiagnosticService {
 
             RootCauseAnalysis rca = parseRcaResponse(responseText);
 
-            log.info("RCA generated successfully")
-                .field("alertId", alert.getAlertId())
+            log.info(LogMessages.Diagnostic.RCA_GENERATED_SUCCESS)
+                .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
                 .field("anomalyType", rca.anomalyType())
                 .field("rcaConfidence", rca.llmConfidenceScoreForRca())
                 .field("solutionConfidence", rca.llmConfidenceScoreForSolution())
@@ -209,8 +210,8 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             return rca;
 
         } catch (Exception e) {
-            log.error("RCA generation failed")
-                .field("alertId", alert.getAlertId())
+            log.error(LogMessages.Diagnostic.RCA_GENERATION_FAILED)
+                .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
                 .exception(e)
                 .log();
             throw new RuntimeException("Failed to generate RCA for alert: " + alert.getAlertId(), e);

@@ -1,6 +1,7 @@
 package com.causa.core.services.impl;
 
 import com.causa.common.constants.DiagnosticConstants.DiagnosticStatus;
+import com.causa.common.constants.JsonParsingConstants;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
 import com.causa.config.LLMConfig;
@@ -35,12 +36,6 @@ public class DiagnosticServiceImpl implements DiagnosticService {
 
     private static final CausaLogger log = CausaLogger.getLogger(DiagnosticServiceImpl.class);
 
-    // JSON parsing constants
-    private static final String JSON_CODE_BLOCK_PREFIX = "```json";
-    private static final String CODE_BLOCK_PREFIX = "```";
-    private static final int JSON_CODE_BLOCK_PREFIX_LENGTH = 7;
-    private static final int CODE_BLOCK_PREFIX_LENGTH = 3;
-
     private final DiagnosticRepository diagnosticRepository;
     private final McpContextCollector mcpContextCollector;
     private final RcaPromptBuilder rcaPromptBuilder;
@@ -53,13 +48,14 @@ public class DiagnosticServiceImpl implements DiagnosticService {
                                   McpContextCollector mcpContextCollector,
                                   RcaPromptBuilder rcaPromptBuilder,
                                   PromptSender promptSender,
-                                  LLMConfig llmConfig) {
+                                  LLMConfig llmConfig,
+                                  ObjectMapper objectMapper) {
         this.diagnosticRepository = diagnosticRepository;
         this.mcpContextCollector = mcpContextCollector;
         this.rcaPromptBuilder = rcaPromptBuilder;
         this.promptSender = promptSender;
         this.llmConfig = llmConfig;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -224,20 +220,30 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     /**
      * Parses the LLM JSON response into a RootCauseAnalysis object.
      *
+     * <p>Handles markdown code blocks case-insensitively (```json, ```JSON, ```json5, etc.)
+     * by removing entire first line if it starts with backticks.
+     *
      * @param responseText the LLM response text (should be JSON)
      * @return the parsed RCA
      */
     private RootCauseAnalysis parseRcaResponse(String responseText) throws Exception {
         // Clean the response - remove markdown code blocks if present
         String jsonText = responseText.trim();
-        if (jsonText.startsWith(JSON_CODE_BLOCK_PREFIX)) {
-            jsonText = jsonText.substring(JSON_CODE_BLOCK_PREFIX_LENGTH);
-        } else if (jsonText.startsWith(CODE_BLOCK_PREFIX)) {
-            jsonText = jsonText.substring(CODE_BLOCK_PREFIX_LENGTH);
+
+        // Handle opening code block case-insensitively
+        if (jsonText.startsWith(JsonParsingConstants.CODE_BLOCK_PREFIX)) {
+            // Remove entire first line (handles ```json, ```JSON, ```json5, etc.)
+            int firstNewline = jsonText.indexOf('\n');
+            if (firstNewline > 0) {
+                jsonText = jsonText.substring(firstNewline + 1);
+            }
         }
-        if (jsonText.endsWith(CODE_BLOCK_PREFIX)) {
-            jsonText = jsonText.substring(0, jsonText.length() - CODE_BLOCK_PREFIX_LENGTH);
+
+        // Handle closing code block
+        if (jsonText.endsWith(JsonParsingConstants.CODE_BLOCK_PREFIX)) {
+            jsonText = jsonText.substring(0, jsonText.length() - JsonParsingConstants.CODE_BLOCK_PREFIX_LENGTH);
         }
+
         jsonText = jsonText.trim();
 
         // Parse JSON to RootCauseAnalysis

@@ -98,7 +98,7 @@ Generate Root Cause Analysis (RCA) for Kubernetes pod issues using LLM-based ana
    └─ latencyMs
    ↓
 9. parseRcaResponse(responseText)
-   ├─→ Strip markdown code blocks
+   ├─→ Strip Markdown code blocks
    ├─→ Parse JSON to RootCauseAnalysis
    └─→ Validate structure
    ↓

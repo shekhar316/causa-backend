@@ -130,14 +130,12 @@ causa:
     template:
       path: "/prompts/rca-prompt-template.yml"  # default
 
-# Vertex AI Configuration (if provider = vertex-ai-anthropic)
-causa:
+  # Vertex AI Configuration (if provider = vertex-ai-anthropic)
   vertex:
     project-id: "your-gcp-project"
     location: "us-east5"
 
-# Direct Anthropic Configuration (if provider = anthropic)
-causa:
+  # Direct Anthropic Configuration (if provider = anthropic)
   anthropic:
     api-key: "${ANTHROPIC_API_KEY}"
 ```

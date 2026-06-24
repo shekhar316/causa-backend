@@ -1,6 +1,9 @@
 package com.causa.core.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
@@ -38,10 +41,16 @@ public record RootCauseAnalysis(
     List<Solution> possibleSolutions,
 
     @JsonProperty("llm_confidence_score_for_rca")
-    double llmConfidenceScoreForRca,
+    @NotNull(message = "RCA confidence score is required")
+    @DecimalMin(value = "0.0", message = "RCA confidence score must be >= 0.0")
+    @DecimalMax(value = "1.0", message = "RCA confidence score must be <= 1.0")
+    Double llmConfidenceScoreForRca,
 
     @JsonProperty("llm_confidence_score_for_solution")
-    double llmConfidenceScoreForSolution,
+    @NotNull(message = "Solution confidence score is required")
+    @DecimalMin(value = "0.0", message = "Solution confidence score must be >= 0.0")
+    @DecimalMax(value = "1.0", message = "Solution confidence score must be <= 1.0")
+    Double llmConfidenceScoreForSolution,
 
     @JsonProperty("confidence_summary")
     String confidenceSummary,

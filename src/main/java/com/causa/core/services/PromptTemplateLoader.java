@@ -1,7 +1,8 @@
 package com.causa.core.services;
 
+import com.causa.config.RcaConfig;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+import jakarta.inject.Inject;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
@@ -12,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Prompt Template Loader
  *
  * <p>Loads and caches YAML-based prompt templates for different LLM models.
- * Supports model-specific prompt variations (claude-rca, granite-rca, ollama-rca, etc.)
+ * Supports model-specific prompt variations (vertex-ai-anthropic, direct-anthropic, bob, ollama)
  *
  * @since 0.0.1
  */
@@ -22,10 +23,9 @@ public class PromptTemplateLoader {
     private final String templatePath;
     private final Map<String, PromptTemplate> templateCache = new ConcurrentHashMap<>();
 
-    public PromptTemplateLoader(
-        @ConfigProperty(name = "causa.rca.template.path", defaultValue = "/prompts/rca-prompt-template.yml")
-        String templatePath) {
-        this.templatePath = templatePath;
+    @Inject
+    public PromptTemplateLoader(RcaConfig rcaConfig) {
+        this.templatePath = rcaConfig.templatePath();
     }
 
     /**

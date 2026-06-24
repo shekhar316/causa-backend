@@ -123,8 +123,6 @@ causa:
     model-name: "claude-sonnet-4-6"
     temperature: 0.1
     max-tokens: 4096
-    timeout-seconds: 60
-
   # RCA Template Configuration
   rca:
     template:

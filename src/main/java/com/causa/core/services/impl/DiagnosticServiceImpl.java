@@ -34,6 +34,12 @@ public class DiagnosticServiceImpl implements DiagnosticService {
 
     private static final CausaLogger log = CausaLogger.getLogger(DiagnosticServiceImpl.class);
 
+    // JSON parsing constants
+    private static final String JSON_CODE_BLOCK_PREFIX = "```json";
+    private static final String CODE_BLOCK_PREFIX = "```";
+    private static final int JSON_CODE_BLOCK_PREFIX_LENGTH = 7;
+    private static final int CODE_BLOCK_PREFIX_LENGTH = 3;
+
     private final DiagnosticRepository diagnosticRepository;
     private final McpContextCollector mcpContextCollector;
     private final RcaPromptBuilder rcaPromptBuilder;
@@ -95,8 +101,7 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     /**
      * Builds context string to be sent to LLM.
      *
-     * <p>Constructs a formatted context string from MCP data following the format
-     * defined in shekhar316/causa-prompts repository.
+     * <p>Collects diagnostic context from MCP servers and formats as structured string.
      *
      * @param alert the alert to build context for
      * @return formatted context string for LLM
@@ -106,12 +111,8 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             .field("alertId", alert.getAlertId())
             .log();
 
-        // TODO: Replace with actual MCP context once merged
-        // For now, using test context from causa-prompts for internal testing
-        String contextString = buildTestContext(alert);
-
-        // FUTURE: Uncomment when MCP integration is complete
-        // String contextString = mcpContextCollector.collectContextAsString(alert);
+        // Collect context from MCP servers
+        String contextString = mcpContextCollector.collectContextAsString(alert);
 
         log.debug("LLM context built")
             .field("alertId", alert.getAlertId())
@@ -119,28 +120,6 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             .log();
 
         return contextString;
-    }
-
-    /**
-     * Builds test context for internal testing.
-     *
-     * <p>Loads test context from classpath resource files in /test-contexts/ directory.
-     * This allows easy modification of test scenarios without recompiling code.
-     *
-     * <p>Based on examples from: https://github.com/shekhar316/causa-prompts
-     *
-     * @param alert the alert to build context for
-     * @return test context string loaded from resource file
-     */
-    private String buildTestContext(Alert alert) {
-        try (InputStream is = getClass().getResourceAsStream("/test-contexts/heap-oom-scenario.txt")) {
-            if (is == null) {
-                throw new RuntimeException("Test context file not found: /test-contexts/heap-oom-scenario.txt");
-            }
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load test context from classpath", e);
-        }
     }
 
     /**
@@ -185,12 +164,12 @@ public class DiagnosticServiceImpl implements DiagnosticService {
                 .field("userPromptLength", userPrompt.length())
                 .log();
 
-            // DEBUG: Print context being sent to LLM
-            System.out.println("\n========== CONTEXT SENT TO LLM (Alert: " + alert.getAlertId() + ") ==========");
-            System.out.println(contextString);
-            System.out.println("\n========== SYSTEM PROMPT ==========");
-            System.out.println(systemPrompt);
-            System.out.println("========================================\n");
+            log.debug("Context and prompts prepared")
+                .field("alertId", alert.getAlertId())
+                .field("contextLength", contextString.length())
+                .field("systemPromptLength", systemPrompt.length())
+                .field("userPromptLength", userPrompt.length())
+                .log();
 
             // Build LLM request
             LLMRequest llmRequest = LLMRequest.builder(userPrompt)
@@ -213,28 +192,12 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             // Parse JSON response to RootCauseAnalysis
             String responseText = llmResponse.responseText();
 
-            // DEBUG: Print LLM response
-            System.out.println("\n========== RAW LLM RESPONSE (Alert: " + alert.getAlertId() + ") ==========");
-            System.out.println(responseText);
-            System.out.println("========================================\n");
+            log.debug("Parsing LLM response")
+                .field("alertId", alert.getAlertId())
+                .field("responseLength", responseText.length())
+                .log();
 
             RootCauseAnalysis rca = parseRcaResponse(responseText);
-
-            // DEBUG: Print parsed RCA summary
-            System.out.println("\n========== PARSED RCA OUTPUT ==========");
-            System.out.println("Alert ID: " + alert.getAlertId());
-            System.out.println("Issue Title: " + rca.issueTitle());
-            System.out.println("Anomaly Type: " + rca.anomalyType());
-            System.out.println("Root Cause: " + rca.rootCause());
-            System.out.println("RCA Confidence: " + rca.llmConfidenceScoreForRca());
-            System.out.println("Solution Confidence: " + rca.llmConfidenceScoreForSolution());
-            System.out.println("Number of Solutions: " + rca.possibleSolutions().size());
-            System.out.println("Solutions:");
-            for (int i = 0; i < rca.possibleSolutions().size(); i++) {
-                var sol = rca.possibleSolutions().get(i);
-                System.out.println("  " + (i + 1) + ". " + sol.solution() + " (Probability: " + sol.successProbability() + ")");
-            }
-            System.out.println("========================================\n");
 
             log.info("RCA generated successfully")
                 .field("alertId", alert.getAlertId())
@@ -263,13 +226,13 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     private RootCauseAnalysis parseRcaResponse(String responseText) throws Exception {
         // Clean the response - remove markdown code blocks if present
         String jsonText = responseText.trim();
-        if (jsonText.startsWith("```json")) {
-            jsonText = jsonText.substring(7);
-        } else if (jsonText.startsWith("```")) {
-            jsonText = jsonText.substring(3);
+        if (jsonText.startsWith(JSON_CODE_BLOCK_PREFIX)) {
+            jsonText = jsonText.substring(JSON_CODE_BLOCK_PREFIX_LENGTH);
+        } else if (jsonText.startsWith(CODE_BLOCK_PREFIX)) {
+            jsonText = jsonText.substring(CODE_BLOCK_PREFIX_LENGTH);
         }
-        if (jsonText.endsWith("```")) {
-            jsonText = jsonText.substring(0, jsonText.length() - 3);
+        if (jsonText.endsWith(CODE_BLOCK_PREFIX)) {
+            jsonText = jsonText.substring(0, jsonText.length() - CODE_BLOCK_PREFIX_LENGTH);
         }
         jsonText = jsonText.trim();
 

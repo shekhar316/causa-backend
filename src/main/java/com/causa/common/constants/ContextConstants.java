@@ -20,6 +20,11 @@ public final class ContextConstants {
     public static final String SECTION_SUFFIX = " ---";
     public static final String NOT_AVAILABLE = "No Data Available";
     public static final String FIELD_SEPARATOR = ": ";
+    
+    // Logging format constants
+    public static final int SEPARATOR_LENGTH = 80;
+    public static final String SEPARATOR_CHAR = "=";
+    public static final String CONTEXT_LOG_HEADER = "COLLECTED DIAGNOSTIC CONTEXT (LLM-Ready)";
     public static final String NEWLINE = "\n";
 
     // Section headers

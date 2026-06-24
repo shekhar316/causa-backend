@@ -171,6 +171,85 @@ public final class McpConstants {
 
         public static final String DATA_PREFIX = "data: ";
         public static final String LINE_SEPARATOR = "\n";
+        public static final String EVENT_MESSAGE = "event: message";
+    }
+
+
+    /**
+     * MCP endpoint paths
+     */
+    public static final class Paths {
+        private Paths() {}
+
+        public static final String MCP_ENDPOINT = "/mcp";
+        public static final String MCP_ENDPOINT_SLASH = "/mcp/";
+    }
+    
+    /**
+     * YAML parsing constants
+     */
+    public static final class Yaml {
+        private Yaml() {}
+
+        public static final String PHASE_PREFIX = "phase:";
+        public static final String REASON_PREFIX = "reason:";
+        public static final String TYPE_PREFIX = "Type:";
+        public static final String REASON_FIELD = "Reason:";
+        public static final String MESSAGE_FIELD = "Message:";
+        public static final String TIMESTAMP_FIELD = "Timestamp:";
+        public static final String WAITING_STATE = "waiting:";
+        public static final String TERMINATED_STATE = "terminated:";
+        public static final String RUNNING_STATE = "running:";
+        public static final String STARTED_AT_FIELD = "startedAt:";
+        public static final String RESTART_COUNT_FIELD = "restartCount:";
+        public static final String CONTAINER_STATUSES_SECTION = "containerStatuses:";
+        public static final String INIT_CONTAINER_STATUSES_SECTION = "initContainerStatuses:";
+        public static final String SPEC_SECTION = "spec:";
+        public static final String CONTAINERS_SECTION = "containers:";
+        public static final String RESOURCES_SECTION = "resources:";
+        public static final String LIMITS_SECTION = "limits:";
+        public static final String REQUESTS_SECTION = "requests:";
+        public static final String CPU_FIELD = "cpu:";
+        public static final String MEMORY_FIELD = "memory:";
+        public static final String STATE_FIELD = "state:";
+        public static final String HOST_IP_FIELD = "hostIP:";
+        public static final String ITEM_PREFIX = "- ";
+        public static final String COLON_SEPARATOR = ":";
+        public static final int COLON_SPLIT_LIMIT = 2;
+    }
+
+    /**
+     * Logging field names
+     */
+    public static final class LogFields {
+        private LogFields() {}
+
+        public static final String ALERT_ID = "alertId";
+        public static final String POD_NAME = "podName";
+        public static final String NAMESPACE = "namespace";
+        public static final String CONTAINER = "container";
+        public static final String CONTAINER_NAME = "containerName";
+        public static final String STATUS = "status";
+        public static final String TOOL = "tool";
+        public static final String ERROR = "error";
+        public static final String ERROR_TEXT = "errorText";
+        public static final String HAS_K8S_CONTEXT = "hasK8sContext";
+        public static final String HAS_KRUIZE_CONTEXT = "hasKruizeContext";
+        public static final String HAS_CRYOSTAT_CONTEXT = "hasCryostatContext";
+        public static final String RETRY_ATTEMPT = "retryAttempt";
+        public static final String DELAY_MS = "delayMs";
+        public static final String ANALYSIS_TYPE = "analysisType";
+    }
+
+    /**
+     * String formatting constants
+     */
+    public static final class Format {
+        private Format() {}
+
+        public static final String INVOLVED_OBJECT_NAME_PREFIX = "involvedObject.name=";
+        public static final String PARENTHESIS_FORMAT = " (%s)";
+        public static final String VERSION = "version";
     }
 
     /**

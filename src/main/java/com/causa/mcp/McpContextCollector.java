@@ -60,8 +60,8 @@ public class McpContextCollector {
      */
     public DiagnosticContext collectContext(Alert alert) {
         log.info(LogMessages.Mcp.MCP_CONTEXT_COLLECTION_START)
-            \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
-            \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.POD_NAME, alert.getPodName())
             .field(McpConstants.LogFields.NAMESPACE, alert.getNamespace())
             .log();
 
@@ -87,7 +87,7 @@ public class McpContextCollector {
             contextBuilder.podLogs(collectKubernetesPodLogs(alert));
         } else {
             log.info(LogMessages.Mcp.MCP_SKIPPED_NO_POD)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .log();
         }
 
@@ -96,7 +96,7 @@ public class McpContextCollector {
             collectKruizeContext(contextBuilder, alert, resolvedContainerName);
         } else {
             log.info(LogMessages.Mcp.MCP_KRUIZE_SKIPPED_NO_CONTAINER)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .log();
         }
 
@@ -108,7 +108,7 @@ public class McpContextCollector {
         DiagnosticContext context = contextBuilder.build();
 
         log.info(LogMessages.Mcp.MCP_CONTEXT_COLLECTION_COMPLETE)
-            \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
             .field(McpConstants.LogFields.HAS_K8S_CONTEXT, context.hasKubernetesContext())
             .field(McpConstants.LogFields.HAS_KRUIZE_CONTEXT, context.hasKruizeContext())
             .field(McpConstants.LogFields.HAS_CRYOSTAT_CONTEXT, context.hasCryostatContext())
@@ -148,8 +148,8 @@ public class McpContextCollector {
             String podPhase = extractPodStatus(podStatusYaml);
 
             log.info(LogMessages.Mcp.MCP_K8S_POD_STATUS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
-                \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.POD_NAME, alert.getPodName())
                 .field(McpConstants.LogFields.NAMESPACE, alert.getNamespace())
                 .field(McpConstants.LogFields.STATUS, podPhase)
                 .log();
@@ -164,7 +164,7 @@ public class McpContextCollector {
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
                 .field(McpConstants.LogFields.TOOL, "pods_get")
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
             return null;
@@ -198,8 +198,8 @@ public class McpContextCollector {
             String eventsText = extractEventsText(result);
 
             log.info(LogMessages.Mcp.MCP_K8S_POD_EVENTS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
-                \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.POD_NAME, alert.getPodName())
                 .log();
 
             return eventsText;
@@ -207,7 +207,7 @@ public class McpContextCollector {
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
                 .field(McpConstants.LogFields.TOOL, "events_list")
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
             return null;
@@ -245,8 +245,8 @@ public class McpContextCollector {
             String logsText = extractLogsText(result);
 
             log.info(LogMessages.Mcp.MCP_K8S_POD_LOGS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
-                \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.POD_NAME, alert.getPodName())
                 .field(McpConstants.LogFields.CONTAINER, alert.getContainerName())
                 .log();
 
@@ -255,7 +255,7 @@ public class McpContextCollector {
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
                 .field(McpConstants.LogFields.TOOL, "pods_log")
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
             return null;
@@ -793,13 +793,13 @@ public class McpContextCollector {
             builder.costRecommendations(costText);
 
             log.info(LogMessages.Mcp.MCP_KRUIZE_COST_RECOMMENDATIONS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.CONTAINER_NAME, containerName)
                 .log();
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
                 .field(McpConstants.LogFields.TOOL, McpConstants.Tools.KRUIZE_GET_COST_RECOMMENDATIONS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
         }
@@ -829,13 +829,13 @@ public class McpContextCollector {
             builder.performanceRecommendations(perfText);
 
             log.info(LogMessages.Mcp.MCP_KRUIZE_PERF_RECOMMENDATIONS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.CONTAINER_NAME, containerName)
                 .log();
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
                 .field(McpConstants.LogFields.TOOL, McpConstants.Tools.KRUIZE_GET_PERF_RECOMMENDATIONS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
         }
@@ -859,7 +859,7 @@ public class McpContextCollector {
         builder.gcAnalysis(gcResult);
         if (gcResult != null) {
             log.info(LogMessages.Mcp.MCP_CRYOSTAT_GC_ANALYSIS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .log();
         }
 
@@ -872,7 +872,7 @@ public class McpContextCollector {
         builder.memoryAnalysis(memResult);
         if (memResult != null) {
             log.info(LogMessages.Mcp.MCP_CRYOSTAT_MEMORY_ANALYSIS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .log();
         }
 
@@ -885,7 +885,7 @@ public class McpContextCollector {
         builder.threadAnalysis(threadResult);
         if (threadResult != null) {
             log.info(LogMessages.Mcp.MCP_CRYOSTAT_THREAD_ANALYSIS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .log();
         }
 
@@ -898,7 +898,7 @@ public class McpContextCollector {
         builder.exceptionAnalysis(exceptionResult);
         if (exceptionResult != null) {
             log.info(LogMessages.Mcp.MCP_CRYOSTAT_EXCEPTION_ANALYSIS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .log();
         }
 
@@ -911,7 +911,7 @@ public class McpContextCollector {
         builder.containerAnalysis(containerResult);
         if (containerResult != null) {
             log.info(LogMessages.Mcp.MCP_CRYOSTAT_CONTAINER_ANALYSIS)
-                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .log();
         }
     }
@@ -961,7 +961,7 @@ public class McpContextCollector {
                     } else {
                         log.warn(LogMessages.Mcp.MCP_CRYOSTAT_MAX_RETRIES)
                             .field(McpConstants.LogFields.TOOL, toolName)
-                            \.field(McpConstants.LogFields.ALERT_ID, alertId)
+                            .field(McpConstants.LogFields.ALERT_ID, alertId)
                             .log();
                         return null;
                     }
@@ -975,7 +975,7 @@ public class McpContextCollector {
             } catch (Exception e) {
                 log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
                     .field(McpConstants.LogFields.TOOL, toolName)
-                    \.field(McpConstants.LogFields.ALERT_ID, alertId)
+                    .field(McpConstants.LogFields.ALERT_ID, alertId)
                     .field("attempt", attempt + 1)
                     .field(McpConstants.LogFields.ERROR, e.getMessage())
                     .log();

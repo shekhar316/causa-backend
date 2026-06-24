@@ -5,6 +5,7 @@ import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
 import com.causa.config.McpConfig;
 import com.causa.core.domain.Alert;
+import com.causa.core.domain.DiagnosticContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -49,38 +50,87 @@ public class McpContextCollector {
     }
 
     /**
-     * Collects context from MCP servers and logs results.
+     * Collects diagnostic context from all MCP servers (Kubernetes, Kruize, Cryostat).
      *
-     * <p>Calls Kubernetes MCP for pod status, events, and logs.
-     * Calls Kruize MCP for cost optimization recommendations.
+     * <p>Aggregates pod status, events, logs, resource recommendations, and JFR analysis
+     * into a single {@link DiagnosticContext} object for LLM consumption.
      *
      * @param alert the alert to collect context for
+     * @return diagnostic context with all collected data (fields are nullable on failure)
      */
-    public void collectAndLogContext(Alert alert) {
+    public DiagnosticContext collectContext(Alert alert) {
         log.info(LogMessages.Mcp.MCP_CONTEXT_COLLECTION_START)
-            .field("alertId", alert.getAlertId())
-            .field("podName", alert.getPodName())
-            .field("namespace", alert.getNamespace())
+            \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+            .field(McpConstants.LogFields.NAMESPACE, alert.getNamespace())
             .log();
 
-        // Skip Kubernetes calls if no pod name
-        if (alert.getPodName() == null || alert.getPodName().isBlank()) {
-            log.info(LogMessages.Mcp.MCP_SKIPPED_NO_POD)
-                .field("alertId", alert.getAlertId())
-                .log();
+        DiagnosticContext.Builder contextBuilder = DiagnosticContext.builder()
+            .podName(alert.getPodName())
+            .containerName(alert.getContainerName())
+            .namespace(alert.getNamespace());
+
+        String resolvedContainerName = alert.getContainerName();
+        String fullPodYaml = null; // Keep full YAML for container name extraction
+
+        // Kubernetes context collection
+        if (alert.getPodName() != null && !alert.getPodName().isBlank()) {
+            fullPodYaml = collectKubernetesPodStatus(alert, contextBuilder);
+
+            // Try to extract container name from pod status if not in alert
+            if (resolvedContainerName == null || resolvedContainerName.isBlank()) {
+                resolvedContainerName = extractContainerNameFromPodStatus(fullPodYaml);
+                contextBuilder.containerName(resolvedContainerName);
+            }
+
+            contextBuilder.podEvents(collectKubernetesPodEvents(alert));
+            contextBuilder.podLogs(collectKubernetesPodLogs(alert));
         } else {
-            collectKubernetesPodStatus(alert);
-            collectKubernetesPodEvents(alert);
-            collectKubernetesPodLogs(alert);
+            log.info(LogMessages.Mcp.MCP_SKIPPED_NO_POD)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .log();
         }
+
+        // Kruize context collection (requires container name)
+        if (resolvedContainerName != null && !resolvedContainerName.isBlank()) {
+            collectKruizeContext(contextBuilder, alert, resolvedContainerName);
+        } else {
+            log.info(LogMessages.Mcp.MCP_KRUIZE_SKIPPED_NO_CONTAINER)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .log();
+        }
+
+        // Cryostat context collection (requires pod name)
+        if (alert.getPodName() != null && !alert.getPodName().isBlank()) {
+            collectCryostatContext(contextBuilder, alert);
+        }
+
+        DiagnosticContext context = contextBuilder.build();
+
+        log.info(LogMessages.Mcp.MCP_CONTEXT_COLLECTION_COMPLETE)
+            \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.HAS_K8S_CONTEXT, context.hasKubernetesContext())
+            .field(McpConstants.LogFields.HAS_KRUIZE_CONTEXT, context.hasKruizeContext())
+            .field(McpConstants.LogFields.HAS_CRYOSTAT_CONTEXT, context.hasCryostatContext())
+            .log();
+
+        return context;
     }
 
     /**
      * Calls Kubernetes MCP pods_get tool to retrieve pod status.
+     * Sets the formatted summary in contextBuilder and returns full YAML for container extraction.
+     *
+     * @param alert the alert
+     * @param contextBuilder the context builder to populate with formatted summary
+     * @return full pod YAML for container name extraction, or null on failure
      */
-    private void collectKubernetesPodStatus(Alert alert) {
+    private String collectKubernetesPodStatus(Alert alert, DiagnosticContext.Builder contextBuilder) {
         try {
-            String sessionId = initializeMcpSession(mcpConfig.kubernetes().endpoint() + "/mcp");
+            String sessionId = initializeMcpSession(
+                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().timeoutMs()
+            );
 
             ObjectNode arguments = objectMapper.createObjectNode();
             arguments.put(McpConstants.Arguments.NAME, alert.getPodName());
@@ -94,40 +144,44 @@ public class McpContextCollector {
                 mcpConfig.kubernetes().timeoutMs()
             );
 
-            String podStatus = extractPodStatus(result);
+            String podStatusYaml = extractTextFromContent(result);
+            String podPhase = extractPodStatus(podStatusYaml);
 
             log.info(LogMessages.Mcp.MCP_K8S_POD_STATUS)
-                .field("alertId", alert.getAlertId())
-                .field("podName", alert.getPodName())
-                .field("namespace", alert.getNamespace())
-                .field("status", podStatus)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+                .field(McpConstants.LogFields.NAMESPACE, alert.getNamespace())
+                .field(McpConstants.LogFields.STATUS, podPhase)
                 .log();
 
-            // Print formatted pod status
-            System.out.println(McpConstants.OutputHeaders.POD_STATUS);
-            System.out.println("Pod: " + alert.getPodName());
-            System.out.println("Namespace: " + alert.getNamespace());
-            System.out.println("Status: " + podStatus);
-            System.out.println();
+            // Extract and set summary in context
+            String summary = extractPodStatusSummary(podStatusYaml);
+            contextBuilder.podStatus(summary);
+
+            // Return full YAML for container name extraction
+            return podStatusYaml;
 
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
-                .field("tool", "pods_get")
-                .field("alertId", alert.getAlertId())
-                .field("error", e.getMessage())
+                .field(McpConstants.LogFields.TOOL, "pods_get")
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
-            System.out.println(McpConstants.OutputHeaders.POD_STATUS);
-            System.out.println(String.format(McpConstants.Errors.UNABLE_TO_GET_POD_STATUS, e.getMessage()));
-            System.out.println();
+            return null;
         }
     }
 
     /**
      * Calls Kubernetes MCP events_list tool to retrieve pod events.
+     *
+     * @return formatted events text, or null on failure
      */
-    private void collectKubernetesPodEvents(Alert alert) {
+    private String collectKubernetesPodEvents(Alert alert) {
         try {
-            String sessionId = initializeMcpSession(mcpConfig.kubernetes().endpoint() + "/mcp");
+            String sessionId = initializeMcpSession(
+                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().timeoutMs()
+            );
 
             ObjectNode arguments = objectMapper.createObjectNode();
             arguments.put(McpConstants.Arguments.FIELD_SELECTOR, "involvedObject.name=" + alert.getPodName());
@@ -144,33 +198,33 @@ public class McpContextCollector {
             String eventsText = extractEventsText(result);
 
             log.info(LogMessages.Mcp.MCP_K8S_POD_EVENTS)
-                .field("alertId", alert.getAlertId())
-                .field("podName", alert.getPodName())
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
                 .log();
 
-            // Print formatted events
-            System.out.println(String.format(McpConstants.OutputHeaders.KUBERNETES_EVENTS, alert.getPodName()));
-            System.out.println(eventsText);
-            System.out.println();
+            return eventsText;
 
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
-                .field("tool", "events_list")
-                .field("alertId", alert.getAlertId())
-                .field("error", e.getMessage())
+                .field(McpConstants.LogFields.TOOL, "events_list")
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
-            System.out.println(String.format(McpConstants.OutputHeaders.KUBERNETES_EVENTS, alert.getPodName()));
-            System.out.println(String.format(McpConstants.Errors.UNABLE_TO_GET_EVENTS, e.getMessage()));
-            System.out.println();
+            return null;
         }
     }
 
     /**
      * Calls Kubernetes MCP pods_log tool to retrieve pod logs.
+     *
+     * @return formatted log text (last 25 lines), or null on failure
      */
-    private void collectKubernetesPodLogs(Alert alert) {
+    private String collectKubernetesPodLogs(Alert alert) {
         try {
-            String sessionId = initializeMcpSession(mcpConfig.kubernetes().endpoint() + "/mcp");
+            String sessionId = initializeMcpSession(
+                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().timeoutMs()
+            );
 
             ObjectNode arguments = objectMapper.createObjectNode();
             arguments.put(McpConstants.Arguments.NAME, alert.getPodName());
@@ -191,34 +245,32 @@ public class McpContextCollector {
             String logsText = extractLogsText(result);
 
             log.info(LogMessages.Mcp.MCP_K8S_POD_LOGS)
-                .field("alertId", alert.getAlertId())
-                .field("podName", alert.getPodName())
-                .field("container", alert.getContainerName())
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                \.field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+                .field(McpConstants.LogFields.CONTAINER, alert.getContainerName())
                 .log();
 
-            // Print formatted logs
-            System.out.println(McpConstants.OutputHeaders.POD_LOGS);
-            System.out.println("Pod: " + alert.getPodName() + " | Container: " + alert.getContainerName());
-            System.out.println(logsText);
-            System.out.println();
+            return logsText;
 
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
-                .field("tool", "pods_log")
-                .field("alertId", alert.getAlertId())
-                .field("error", e.getMessage())
+                .field(McpConstants.LogFields.TOOL, "pods_log")
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
-            System.out.println(McpConstants.OutputHeaders.POD_LOGS);
-            System.out.println(String.format(McpConstants.Errors.UNABLE_TO_GET_LOGS, e.getMessage()));
-            System.out.println();
+            return null;
         }
     }
 
 
     /**
      * Initializes MCP session and returns session ID.
+     *
+     * @param endpoint the MCP endpoint URL
+     * @param timeoutMs HTTP timeout in milliseconds
+     * @return the session ID
      */
-    private String initializeMcpSession(String endpoint) throws Exception {
+    private String initializeMcpSession(String endpoint, int timeoutMs) throws Exception {
         ObjectNode initRequest = objectMapper.createObjectNode();
         initRequest.put(McpConstants.JsonRpc.FIELD_JSONRPC, McpConstants.JsonRpc.VERSION);
         initRequest.put(McpConstants.JsonRpc.FIELD_ID, 1);
@@ -242,7 +294,7 @@ public class McpContextCollector {
             .header(McpConstants.Headers.CONTENT_TYPE, McpConstants.Headers.CONTENT_TYPE_JSON)
             .header(McpConstants.Headers.ACCEPT, McpConstants.Headers.ACCEPT_VALUE)
             .POST(HttpRequest.BodyPublishers.ofString(initRequest.toString()))
-            .timeout(Duration.ofMillis(mcpConfig.kubernetes().timeoutMs()))
+            .timeout(Duration.ofMillis(timeoutMs))
             .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -263,7 +315,7 @@ public class McpContextCollector {
             .orElse(UUID.randomUUID().toString());
 
         // Send notifications/initialized as per MCP protocol
-        sendInitializedNotification(endpoint, sessionId);
+        sendInitializedNotification(endpoint, sessionId, timeoutMs);
 
         return sessionId;
     }
@@ -272,7 +324,7 @@ public class McpContextCollector {
      * Sends the initialized notification after successful initialize.
      * Required by MCP protocol before calling tools.
      */
-    private void sendInitializedNotification(String endpoint, String sessionId) throws Exception {
+    private void sendInitializedNotification(String endpoint, String sessionId, int timeoutMs) throws Exception {
         ObjectNode notification = objectMapper.createObjectNode();
         notification.put(McpConstants.JsonRpc.FIELD_JSONRPC, McpConstants.JsonRpc.VERSION);
         notification.put(McpConstants.JsonRpc.FIELD_METHOD, McpConstants.JsonRpc.METHOD_NOTIFICATIONS_INITIALIZED);
@@ -283,7 +335,7 @@ public class McpContextCollector {
             .header(McpConstants.Headers.ACCEPT, McpConstants.Headers.ACCEPT_VALUE)
             .header(McpConstants.Headers.MCP_SESSION_ID, sessionId)
             .POST(HttpRequest.BodyPublishers.ofString(notification.toString()))
-            .timeout(Duration.ofMillis(mcpConfig.kubernetes().timeoutMs()))
+            .timeout(Duration.ofMillis(timeoutMs))
             .build();
 
         httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -354,16 +406,14 @@ public class McpContextCollector {
     }
 
     /**
-     * Extracts pod status/phase from pods_get result.
+     * Extracts pod status/phase from pods_get text (YAML format).
+     *
+     * @param text the raw YAML text from pods_get
+     * @return the pod phase + container state, or "Unknown"
      */
-    private String extractPodStatus(JsonNode result) {
-        if (result == null) {
+    private String extractPodStatus(String text) {
+        if (text == null || text.isBlank()) {
             return McpConstants.Defaults.UNKNOWN_STATUS;
-        }
-
-        String text = extractTextFromContent(result);
-        if (text == null) {
-            return "Unknown";
         }
 
         try {
@@ -385,7 +435,7 @@ public class McpContextCollector {
                 }
             }
         } catch (Exception e) {
-            log.debug("Could not parse pod status").field("error", e.getMessage()).log();
+            log.debug("Could not parse pod status").field(McpConstants.LogFields.ERROR, e.getMessage()).log();
         }
 
         return McpConstants.Defaults.UNKNOWN_STATUS;
@@ -479,6 +529,7 @@ public class McpContextCollector {
 
     /**
      * Extracts text content from MCP response structure.
+     * Returns "No Data Available" if response contains errors.
      */
     private String extractTextFromContent(JsonNode result) {
         if (result == null) {
@@ -490,11 +541,447 @@ public class McpContextCollector {
             if (content.size() > 0) {
                 JsonNode firstContent = content.get(0);
                 if (firstContent.has(McpConstants.JsonRpc.FIELD_TEXT)) {
-                    return firstContent.get(McpConstants.JsonRpc.FIELD_TEXT).asText();
+                    String text = firstContent.get(McpConstants.JsonRpc.FIELD_TEXT).asText();
+
+                    // Check if the text contains error messages from MCP server
+                    if (text != null && (text.contains(McpConstants.ErrorMarkers.ERROR_CALLING_TOOL) ||
+                                         text.contains(McpConstants.ErrorMarkers.LIST_INDEX_OUT_OF_RANGE))) {
+                        log.debug(LogMessages.Mcp.MCP_ERROR_DETECTED)
+                            .field(McpConstants.LogFields.ERROR_TEXT, text)
+                            .log();
+                        return McpConstants.Defaults.NO_DATA_AVAILABLE;
+                    }
+
+                    return text;
                 }
             }
         }
 
+        return null;
+    }
+
+    /**
+     * Extracts essential pod status information from full YAML.
+     * Returns: state, startedAt, restartCount, resources (requests/limits)
+     *
+     * @param podStatusYaml full pod YAML from pods_get
+     * @return formatted summary string
+     */
+    private String extractPodStatusSummary(String podStatusYaml) {
+        if (podStatusYaml == null || podStatusYaml.isBlank()) {
+            return "Pod status not available";
+        }
+
+        StringBuilder summary = new StringBuilder();
+        String[] lines = podStatusYaml.split("\n");
+
+        // Extract fields
+        String state = null;
+        String startedAt = null;
+        String restartCount = null;
+        String cpuLimit = null;
+        String memoryLimit = null;
+        String cpuRequest = null;
+        String memoryRequest = null;
+
+        // State machine for parsing
+        boolean inStatus = false;
+        boolean inContainerStatuses = false;
+        boolean readingFirstContainerStatus = false;
+        boolean inStateSection = false;
+
+        boolean inSpec = false;
+        boolean inSpecContainers = false;
+        boolean readingFirstSpecContainer = false;
+        boolean inResources = false;
+        boolean inLimits = false;
+        boolean inRequests = false;
+
+        int currentIndent = 0;
+        int containerStatusBaseIndent = 0;
+        int specContainerBaseIndent = 0;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            String trimmed = line.trim();
+
+            // Calculate indent level
+            int indent = line.length() - line.replaceAll("^\\s+", "").length();
+
+            // Track status section
+            if (trimmed.equals("status:")) {
+                inStatus = true;
+                inSpec = false;
+                continue;
+            }
+
+            if (trimmed.equals("spec:")) {
+                inSpec = true;
+                inStatus = false;
+                continue;
+            }
+
+            // === Parse status.containerStatuses (for runtime state) ===
+            if (inStatus && trimmed.equals("containerStatuses:")) {
+                inContainerStatuses = true;
+                containerStatusBaseIndent = indent;
+                continue;
+            }
+
+            if (inContainerStatuses) {
+                // Found start of first container in containerStatuses
+                if (trimmed.startsWith("- ") && indent == containerStatusBaseIndent + 2) {
+                    readingFirstContainerStatus = true;
+                    currentIndent = indent;
+                    continue;
+                }
+
+                // Stop if we hit another top-level key at same indent as containerStatuses
+                if (indent <= containerStatusBaseIndent && !trimmed.isEmpty() && !trimmed.startsWith("-")) {
+                    inContainerStatuses = false;
+                    readingFirstContainerStatus = false;
+                }
+
+                if (readingFirstContainerStatus) {
+                    if (trimmed.startsWith("restartCount:")) {
+                        restartCount = trimmed.split(":", 2)[1].trim();
+                    } else if (trimmed.equals("state:")) {
+                        inStateSection = true;
+                    } else if (inStateSection && trimmed.equals("running:")) {
+                        state = "Running";
+                    } else if (inStateSection && trimmed.equals("waiting:")) {
+                        state = "Waiting";
+                    } else if (inStateSection && trimmed.equals("terminated:")) {
+                        state = "Terminated";
+                    } else if (inStateSection && trimmed.startsWith("startedAt:")) {
+                        startedAt = trimmed.split(":", 2)[1].trim().replace("\"", "");
+                        inStateSection = false;
+                    }
+                }
+            }
+
+            // === Parse spec.containers (for resources) ===
+            if (inSpec && trimmed.equals("containers:")) {
+                inSpecContainers = true;
+                specContainerBaseIndent = indent;
+                continue;
+            }
+
+            if (inSpec && trimmed.equals("initContainers:")) {
+                // Stop reading spec.containers when we hit initContainers
+                inSpecContainers = false;
+                readingFirstSpecContainer = false;
+            }
+
+            if (inSpecContainers) {
+                // Found start of first container in spec.containers
+                if (trimmed.startsWith("- ") && indent == specContainerBaseIndent + 2) {
+                    readingFirstSpecContainer = true;
+                    currentIndent = indent;
+                    continue;
+                }
+
+                if (readingFirstSpecContainer) {
+                    if (trimmed.equals("resources:")) {
+                        inResources = true;
+                    } else if (inResources && trimmed.equals("limits:")) {
+                        inLimits = true;
+                        inRequests = false;
+                    } else if (inResources && trimmed.equals("requests:")) {
+                        inRequests = true;
+                        inLimits = false;
+                    } else if (inLimits && trimmed.startsWith("cpu:")) {
+                        cpuLimit = trimmed.split(":", 2)[1].trim();
+                    } else if (inLimits && trimmed.startsWith("memory:")) {
+                        memoryLimit = trimmed.split(":", 2)[1].trim();
+                    } else if (inRequests && trimmed.startsWith("cpu:")) {
+                        cpuRequest = trimmed.split(":", 2)[1].trim();
+                    } else if (inRequests && trimmed.startsWith("memory:")) {
+                        memoryRequest = trimmed.split(":", 2)[1].trim();
+                        // Done with first container
+                        readingFirstSpecContainer = false;
+                        inSpecContainers = false;
+                        inResources = false;
+                    }
+                }
+            }
+        }
+
+        // Format summary
+        summary.append("State: ").append(state != null ? state : "Unknown").append("\n");
+        if (startedAt != null) {
+            summary.append("Started At: ").append(startedAt).append("\n");
+        }
+        summary.append("Restart Count: ").append(restartCount != null ? restartCount : "0").append("\n");
+        summary.append("\nResource Limits:\n");
+        summary.append("  CPU: ").append(cpuLimit != null ? cpuLimit : "not set").append("\n");
+        summary.append("  Memory: ").append(memoryLimit != null ? memoryLimit : "not set").append("\n");
+        summary.append("Resource Requests:\n");
+        summary.append("  CPU: ").append(cpuRequest != null ? cpuRequest : "not set").append("\n");
+        summary.append("  Memory: ").append(memoryRequest != null ? memoryRequest : "not set").append("\n");
+
+        return summary.toString();
+    }
+
+    /**
+     * Extracts the first container name from Kubernetes pod status YAML.
+     *
+     * @param podStatusText YAML-formatted pod status from pods_get
+     * @return the first container name, or null if not found
+     */
+    private String extractContainerNameFromPodStatus(String podStatusText) {
+        if (podStatusText == null || podStatusText.isBlank()) {
+            return null;
+        }
+        try {
+            // Parse YAML to find: containers: - name: <value>
+            String[] lines = podStatusText.split("\n");
+            boolean inContainers = false;
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.equals("containers:")) {
+                    inContainers = true;
+                    continue;
+                }
+                if (inContainers && trimmed.startsWith("- name:")) {
+                    return trimmed.substring("- name:".length()).trim();
+                }
+                // Exit containers section if we leave the indentation
+                if (inContainers && !trimmed.startsWith("-") && !trimmed.startsWith("name:")
+                    && !line.startsWith(" ") && !line.startsWith("\t")) {
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract container name from pod status")
+                .field(McpConstants.LogFields.ERROR, e.getMessage())
+                .log();
+        }
+        return null;
+    }
+
+    /**
+     * Collects Kruize MCP context (cost and performance recommendations).
+     *
+     * @param builder the context builder to populate
+     * @param alert the alert
+     * @param containerName the resolved container name
+     */
+    private void collectKruizeContext(DiagnosticContext.Builder builder, Alert alert, String containerName) {
+        // Cost recommendations
+        try {
+            String sessionId = initializeMcpSession(
+                mcpConfig.kruize().endpoint() + "/mcp/",
+                mcpConfig.kruize().timeoutMs()
+            );
+
+            ObjectNode arguments = objectMapper.createObjectNode();
+            arguments.put(McpConstants.Arguments.CONTAINER_NAME, containerName);
+            if (alert.getNamespace() != null) {
+                arguments.put(McpConstants.Arguments.NAMESPACE, alert.getNamespace());
+            }
+
+            JsonNode result = callMcpTool(
+                mcpConfig.kruize().endpoint() + "/mcp/",
+                sessionId,
+                McpConstants.Tools.KRUIZE_GET_COST_RECOMMENDATIONS,
+                arguments,
+                mcpConfig.kruize().timeoutMs()
+            );
+
+            String costText = extractTextFromContent(result);
+            builder.costRecommendations(costText);
+
+            log.info(LogMessages.Mcp.MCP_KRUIZE_COST_RECOMMENDATIONS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.CONTAINER_NAME, containerName)
+                .log();
+        } catch (Exception e) {
+            log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
+                .field(McpConstants.LogFields.TOOL, McpConstants.Tools.KRUIZE_GET_COST_RECOMMENDATIONS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ERROR, e.getMessage())
+                .log();
+        }
+
+        // Performance recommendations
+        try {
+            String sessionId = initializeMcpSession(
+                mcpConfig.kruize().endpoint() + "/mcp/",
+                mcpConfig.kruize().timeoutMs()
+            );
+
+            ObjectNode arguments = objectMapper.createObjectNode();
+            arguments.put(McpConstants.Arguments.CONTAINER_NAME, containerName);
+            if (alert.getNamespace() != null) {
+                arguments.put(McpConstants.Arguments.NAMESPACE, alert.getNamespace());
+            }
+
+            JsonNode result = callMcpTool(
+                mcpConfig.kruize().endpoint() + "/mcp/",
+                sessionId,
+                McpConstants.Tools.KRUIZE_GET_PERF_RECOMMENDATIONS,
+                arguments,
+                mcpConfig.kruize().timeoutMs()
+            );
+
+            String perfText = extractTextFromContent(result);
+            builder.performanceRecommendations(perfText);
+
+            log.info(LogMessages.Mcp.MCP_KRUIZE_PERF_RECOMMENDATIONS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.CONTAINER_NAME, containerName)
+                .log();
+        } catch (Exception e) {
+            log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
+                .field(McpConstants.LogFields.TOOL, McpConstants.Tools.KRUIZE_GET_PERF_RECOMMENDATIONS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .field(McpConstants.LogFields.ERROR, e.getMessage())
+                .log();
+        }
+    }
+
+    /**
+     * Collects Cryostat MCP context (JFR analysis from 5 tools).
+     *
+     * @param builder the context builder to populate
+     * @param alert the alert
+     */
+    private void collectCryostatContext(DiagnosticContext.Builder builder, Alert alert) {
+        String podName = alert.getPodName();
+
+        // GC analysis
+        String gcResult = callCryostatToolWithRetry(
+            McpConstants.Tools.CRYOSTAT_GET_GC_ANALYSIS,
+            podName,
+            alert.getAlertId()
+        );
+        builder.gcAnalysis(gcResult);
+        if (gcResult != null) {
+            log.info(LogMessages.Mcp.MCP_CRYOSTAT_GC_ANALYSIS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .log();
+        }
+
+        // Memory analysis
+        String memResult = callCryostatToolWithRetry(
+            McpConstants.Tools.CRYOSTAT_GET_MEMORY_ANALYSIS,
+            podName,
+            alert.getAlertId()
+        );
+        builder.memoryAnalysis(memResult);
+        if (memResult != null) {
+            log.info(LogMessages.Mcp.MCP_CRYOSTAT_MEMORY_ANALYSIS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .log();
+        }
+
+        // Thread analysis
+        String threadResult = callCryostatToolWithRetry(
+            McpConstants.Tools.CRYOSTAT_GET_THREAD_ANALYSIS,
+            podName,
+            alert.getAlertId()
+        );
+        builder.threadAnalysis(threadResult);
+        if (threadResult != null) {
+            log.info(LogMessages.Mcp.MCP_CRYOSTAT_THREAD_ANALYSIS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .log();
+        }
+
+        // Exception analysis
+        String exceptionResult = callCryostatToolWithRetry(
+            McpConstants.Tools.CRYOSTAT_GET_EXCEPTION_ANALYSIS,
+            podName,
+            alert.getAlertId()
+        );
+        builder.exceptionAnalysis(exceptionResult);
+        if (exceptionResult != null) {
+            log.info(LogMessages.Mcp.MCP_CRYOSTAT_EXCEPTION_ANALYSIS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .log();
+        }
+
+        // Container analysis
+        String containerResult = callCryostatToolWithRetry(
+            McpConstants.Tools.CRYOSTAT_GET_CONTAINER_ANALYSIS,
+            podName,
+            alert.getAlertId()
+        );
+        builder.containerAnalysis(containerResult);
+        if (containerResult != null) {
+            log.info(LogMessages.Mcp.MCP_CRYOSTAT_CONTAINER_ANALYSIS)
+                \.field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+                .log();
+        }
+    }
+
+    /**
+     * Calls a Cryostat MCP tool with retry logic for RECORDING_CREATED responses.
+     *
+     * @param toolName the Cryostat tool name
+     * @param podName the pod name argument
+     * @param alertId the alert ID (for logging)
+     * @return the tool response text, or null on failure
+     */
+    private String callCryostatToolWithRetry(String toolName, String podName, String alertId) {
+        int maxRetries = mcpConfig.cryostat().maxRetries();
+        long retryDelay = mcpConfig.cryostat().retryDelayMs();
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                String sessionId = initializeMcpSession(
+                    mcpConfig.cryostat().endpoint() + "/mcp",
+                    mcpConfig.cryostat().timeoutMs()
+                );
+
+                ObjectNode arguments = objectMapper.createObjectNode();
+                arguments.put(McpConstants.Arguments.POD_NAME, podName);
+
+                JsonNode result = callMcpTool(
+                    mcpConfig.cryostat().endpoint() + "/mcp",
+                    sessionId,
+                    toolName,
+                    arguments,
+                    mcpConfig.cryostat().timeoutMs()
+                );
+
+                String text = extractTextFromContent(result);
+
+                // Check for RECORDING_CREATED status
+                if (text != null && text.contains(McpConstants.Cryostat.RECORDING_CREATED_STATUS)) {
+                    if (attempt < maxRetries) {
+                        log.info(LogMessages.Mcp.MCP_CRYOSTAT_RECORDING_CREATED)
+                            .field(McpConstants.LogFields.TOOL, toolName)
+                            .field("attempt", attempt + 1)
+                            .field("retryDelayMs", retryDelay)
+                            .log();
+                        Thread.sleep(retryDelay);
+                        continue;
+                    } else {
+                        log.warn(LogMessages.Mcp.MCP_CRYOSTAT_MAX_RETRIES)
+                            .field(McpConstants.LogFields.TOOL, toolName)
+                            \.field(McpConstants.LogFields.ALERT_ID, alertId)
+                            .log();
+                        return null;
+                    }
+                }
+
+                return text;
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            } catch (Exception e) {
+                log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
+                    .field(McpConstants.LogFields.TOOL, toolName)
+                    \.field(McpConstants.LogFields.ALERT_ID, alertId)
+                    .field("attempt", attempt + 1)
+                    .field(McpConstants.LogFields.ERROR, e.getMessage())
+                    .log();
+                return null;
+            }
+        }
         return null;
     }
 }

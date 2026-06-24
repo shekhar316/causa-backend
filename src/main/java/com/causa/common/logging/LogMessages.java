@@ -149,6 +149,7 @@ public final class LogMessages {
         public static final String MCP_K8S_POD_EVENTS = "Kubernetes pod events retrieved";
         public static final String MCP_K8S_POD_LOGS = "Kubernetes pod logs retrieved";
         public static final String MCP_CALL_FAILED = "MCP tool call failed";
+        public static final String MCP_ERROR_DETECTED = "MCP response contains error, returning No Data Available";
         public static final String MCP_SKIPPED_NO_POD = "Skipping Kubernetes MCP calls - no pod name in alert";
 
         // Kruize MCP

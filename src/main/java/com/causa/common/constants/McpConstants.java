@@ -150,6 +150,17 @@ public final class McpConstants {
         public static final String NO_EVENTS_FOUND = "No events found";
         public static final String NO_LOGS_AVAILABLE = "No logs available";
         public static final String UNKNOWN_STATUS = "Unknown";
+        public static final String NO_DATA_AVAILABLE = "No Data Available";
+    }
+
+    /**
+     * Error detection patterns in MCP responses
+     */
+    public static final class ErrorMarkers {
+        private ErrorMarkers() {}
+
+        public static final String ERROR_CALLING_TOOL = "Error calling tool";
+        public static final String LIST_INDEX_OUT_OF_RANGE = "list index out of range";
     }
 
     /**

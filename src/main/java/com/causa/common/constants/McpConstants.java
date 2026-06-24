@@ -75,6 +75,17 @@ public final class McpConstants {
         public static final String PODS_GET = "pods_get";
         public static final String PODS_LOG = "pods_log";
         public static final String EVENTS_LIST = "events_list";
+
+        // Kruize MCP tools
+        public static final String KRUIZE_GET_COST_RECOMMENDATIONS = "getCostOptimizedRecommendations";
+        public static final String KRUIZE_GET_PERF_RECOMMENDATIONS = "getPerformanceOptimizedRecommendations";
+
+        // Cryostat MCP tools
+        public static final String CRYOSTAT_GET_GC_ANALYSIS = "get_gc_analysis";
+        public static final String CRYOSTAT_GET_MEMORY_ANALYSIS = "get_memory_analysis";
+        public static final String CRYOSTAT_GET_THREAD_ANALYSIS = "get_thread_analysis";
+        public static final String CRYOSTAT_GET_EXCEPTION_ANALYSIS = "get_exception_analysis";
+        public static final String CRYOSTAT_GET_CONTAINER_ANALYSIS = "get_container_analysis";
     }
 
     /**
@@ -88,6 +99,12 @@ public final class McpConstants {
         public static final String CONTAINER = "container";
         public static final String TAIL_LINES = "tailLines";
         public static final String FIELD_SELECTOR = "fieldSelector";
+
+        // Kruize arguments
+        public static final String CONTAINER_NAME = "containerName";
+
+        // Cryostat arguments
+        public static final String POD_NAME = "pod_name";
     }
 
     /**
@@ -110,10 +127,17 @@ public final class McpConstants {
         public static final String UNABLE_TO_GET_POD_STATUS = "Unable to retrieve pod status: %s";
         public static final String UNABLE_TO_GET_EVENTS = "Unable to retrieve events: %s";
         public static final String UNABLE_TO_GET_LOGS = "Unable to retrieve logs: %s";
+        public static final String UNABLE_TO_GET_KRUIZE_RECOMMENDATIONS = "Unable to retrieve Kruize recommendations: %s";
+        public static final String UNABLE_TO_GET_CRYOSTAT_ANALYSIS = "Unable to retrieve Cryostat %s analysis: %s";
+        public static final String CRYOSTAT_RECORDING_CREATED = "Cryostat recording created, retrying after delay";
+        public static final String CRYOSTAT_MAX_RETRIES_EXCEEDED = "Cryostat max retries exceeded for %s";
 
         public static final String MCP_INITIALIZE_FAILED = "MCP initialize failed with status: %d, body: %s";
         public static final String MCP_TOOL_CALL_FAILED = "MCP tool call failed with status: %d, body: %s";
         public static final String MCP_TOOL_ERROR = "MCP tool error: %s";
+
+        public static final String NO_RECOMMENDATIONS_AVAILABLE = "No recommendations available";
+        public static final String NO_ANALYSIS_AVAILABLE = "No analysis available";
     }
 
     /**
@@ -136,5 +160,15 @@ public final class McpConstants {
 
         public static final String DATA_PREFIX = "data: ";
         public static final String LINE_SEPARATOR = "\n";
+    }
+
+    /**
+     * Cryostat-specific constants
+     */
+    public static final class Cryostat {
+        private Cryostat() {}
+
+        public static final String RECORDING_CREATED_STATUS = "RECORDING_CREATED";
+        public static final String STATUS_FIELD = "status";
     }
 }

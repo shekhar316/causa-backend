@@ -37,9 +37,12 @@ public enum ModelType {
      */
     public static ModelType from(String provider, String modelName) {
         // Check if model name indicates BOB/Granite
-        if (modelName != null &&
-            (modelName.toLowerCase().contains("bob") || modelName.toLowerCase().contains("granite"))) {
-            return BOB;
+        if (modelName != null) {
+            String lowerModelName = modelName.toLowerCase();
+            if (lowerModelName.contains(LLMConstants.ModelNames.BOB) ||
+                lowerModelName.contains(LLMConstants.ModelNames.GRANITE)) {
+                return BOB;
+            }
         }
 
         // Match by provider

@@ -48,11 +48,19 @@ public class PromptTemplateLoader {
     @SuppressWarnings("unchecked")
     private PromptTemplate loadTemplateFromYaml(String modelType) {
         try (InputStream is = getClass().getResourceAsStream(templatePath)) {
+    @SuppressWarnings("unchecked")
+    private PromptTemplate loadTemplateFromYaml(String modelType) {
+        if (templatePath == null || templatePath.isBlank()) {
+            throw new IllegalStateException("Prompt template path must be configured and non-empty.");
+        }
+
+        String normalizedTemplatePath = templatePath.startsWith("/") ? templatePath : "/" + templatePath;
+
+        try (InputStream is = getClass().getResourceAsStream(normalizedTemplatePath)) {
             if (is == null) {
                 throw new IllegalStateException(
-                    String.format("Prompt template file not found at configured path: %s (resolved as: %s)",
-                        templatePath, getClass().getResource(templatePath))
-                );
+                        "Prompt template file not found. Configured templatePath='" + templatePath
+                                + "', resolved resource path='" + normalizedTemplatePath + "'.");
             }
 
             Yaml yaml = new Yaml();

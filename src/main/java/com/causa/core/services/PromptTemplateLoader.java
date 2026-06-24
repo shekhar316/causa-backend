@@ -94,25 +94,13 @@ public class PromptTemplateLoader {
         String userPrompt
     ) {
         /**
-         * Renders the user prompt by replacing placeholders with actual values.
+         * Renders the user prompt by replacing the context placeholder.
          *
-         * @param alertName     the alert name
-         * @param severity      the alert severity (will be converted to string)
-         * @param podName       the pod name
-         * @param namespace     the namespace
-         * @param containerName the container name
-         * @param context       the MCP context string
+         * @param context the MCP context string (includes all signal data)
          * @return the rendered prompt
          */
-        public String render(String alertName, Object severity, String podName,
-                             String namespace, String containerName, String context) {
-            return userPrompt
-                .replace(PromptConstants.PLACEHOLDER_ALERT_NAME, alertName)
-                .replace(PromptConstants.PLACEHOLDER_SEVERITY, severity != null ? severity.toString() : "unknown")
-                .replace(PromptConstants.PLACEHOLDER_POD_NAME, podName)
-                .replace(PromptConstants.PLACEHOLDER_NAMESPACE, namespace)
-                .replace(PromptConstants.PLACEHOLDER_CONTAINER_NAME, containerName != null ? containerName : "N/A")
-                .replace(PromptConstants.PLACEHOLDER_CONTEXT, context);
+        public String render(String context) {
+            return userPrompt.replace(PromptConstants.PLACEHOLDER_CONTEXT, context);
         }
     }
 }

@@ -30,12 +30,13 @@ public class RcaPromptBuilder {
     }
 
     /**
-     * Builds the complete RCA prompt with alert details and MCP context.
+     * Builds the complete RCA prompt with MCP context.
      *
-     * <p>Loads model-specific prompt template from YAML and renders it with alert data.
+     * <p>Loads model-specific prompt template from YAML and renders it with context data.
+     * Alert details are embedded in the MCP context, not passed separately.
      *
-     * @param alert the alert to analyze
-     * @param mcpContext the collected MCP context as a string
+     * @param alert the alert to analyze (unused, kept for API compatibility)
+     * @param mcpContext the collected MCP context as a string (includes all signal data)
      * @return the complete RCA prompt
      */
     public String buildPrompt(Alert alert, String mcpContext) {
@@ -45,15 +46,8 @@ public class RcaPromptBuilder {
         // Load appropriate template
         PromptTemplateLoader.PromptTemplate template = templateLoader.loadTemplate(modelType.getTemplateName());
 
-        // Render the prompt with alert details
-        return template.render(
-            alert.getAlertName(),
-            alert.getSeverity(),
-            alert.getPodName(),
-            alert.getNamespace(),
-            alert.getContainerName(),
-            mcpContext
-        );
+        // Render the prompt with context (alert details already in context)
+        return template.render(mcpContext);
     }
 
     /**

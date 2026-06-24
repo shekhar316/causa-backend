@@ -30,10 +30,5 @@ public final class PromptConstants {
     /**
      * Template placeholder strings
      */
-    public static final String PLACEHOLDER_ALERT_NAME = "{{alertName}}";
-    public static final String PLACEHOLDER_SEVERITY = "{{severity}}";
-    public static final String PLACEHOLDER_POD_NAME = "{{podName}}";
-    public static final String PLACEHOLDER_NAMESPACE = "{{namespace}}";
-    public static final String PLACEHOLDER_CONTAINER_NAME = "{{containerName}}";
     public static final String PLACEHOLDER_CONTEXT = "{{context}}";
 }

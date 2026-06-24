@@ -127,6 +127,7 @@ public final class LogMessages {
 
         public static final String DIAGNOSTIC_TRIGGERED = "Diagnostic pipeline triggered";
         public static final String CONTEXT_COLLECTION_STARTED = "Context collection started";
+        public static final String CONTEXT_COLLECTED = "Diagnostic context collected - LLM-ready format";
         public static final String DIAGNOSIS_TYPE_DETERMINED = "Diagnosis type determined";
         public static final String ROOT_CAUSE_ANALYSIS_STARTED = "Root cause analysis started";
         public static final String RCA_VALIDATION_STARTED = "RCA validation started";

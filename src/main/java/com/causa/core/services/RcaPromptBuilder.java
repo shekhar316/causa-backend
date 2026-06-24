@@ -25,8 +25,7 @@ public class RcaPromptBuilder {
     public enum ModelType {
         VERTEX_AI_ANTHROPIC("vertex-ai-anthropic"),
         DIRECT_ANTHROPIC("direct-anthropic"),
-        BOB("bob"),
-        OLLAMA("ollama");
+        BOB("bob");
 
         private final String templateName;
 
@@ -107,10 +106,6 @@ public class RcaPromptBuilder {
 
         if ("anthropic".equalsIgnoreCase(provider)) {
             return ModelType.DIRECT_ANTHROPIC;
-        }
-
-        if ("ollama".equalsIgnoreCase(provider)) {
-            return ModelType.OLLAMA;
         }
 
         // Default to vertex-ai-anthropic

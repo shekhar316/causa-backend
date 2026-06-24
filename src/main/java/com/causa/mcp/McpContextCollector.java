@@ -128,7 +128,7 @@ public class McpContextCollector {
     private String collectKubernetesPodStatus(Alert alert, DiagnosticContext.Builder contextBuilder) {
         try {
             String sessionId = initializeMcpSession(
-                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 mcpConfig.kubernetes().timeoutMs()
             );
 
@@ -137,7 +137,7 @@ public class McpContextCollector {
             arguments.put(McpConstants.Arguments.NAMESPACE, alert.getNamespace());
 
             JsonNode result = callMcpTool(
-                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 sessionId,
                 McpConstants.Tools.PODS_GET,
                 arguments,
@@ -163,7 +163,7 @@ public class McpContextCollector {
 
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
-                .field(McpConstants.LogFields.TOOL, "pods_get")
+                .field(McpConstants.LogFields.TOOL, McpConstants.Tools.PODS_GET)
                 .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
@@ -179,16 +179,16 @@ public class McpContextCollector {
     private String collectKubernetesPodEvents(Alert alert) {
         try {
             String sessionId = initializeMcpSession(
-                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 mcpConfig.kubernetes().timeoutMs()
             );
 
             ObjectNode arguments = objectMapper.createObjectNode();
-            arguments.put(McpConstants.Arguments.FIELD_SELECTOR, "involvedObject.name=" + alert.getPodName());
+            arguments.put(McpConstants.Arguments.FIELD_SELECTOR, McpConstants.Format.INVOLVED_OBJECT_NAME_PREFIX + alert.getPodName());
             arguments.put(McpConstants.Arguments.NAMESPACE, alert.getNamespace());
 
             JsonNode result = callMcpTool(
-                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 sessionId,
                 McpConstants.Tools.EVENTS_LIST,
                 arguments,
@@ -206,7 +206,7 @@ public class McpContextCollector {
 
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
-                .field(McpConstants.LogFields.TOOL, "events_list")
+                .field(McpConstants.LogFields.TOOL, McpConstants.Tools.EVENTS_LIST)
                 .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
@@ -222,7 +222,7 @@ public class McpContextCollector {
     private String collectKubernetesPodLogs(Alert alert) {
         try {
             String sessionId = initializeMcpSession(
-                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 mcpConfig.kubernetes().timeoutMs()
             );
 
@@ -235,7 +235,7 @@ public class McpContextCollector {
             }
 
             JsonNode result = callMcpTool(
-                mcpConfig.kubernetes().endpoint() + "/mcp",
+                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 sessionId,
                 McpConstants.Tools.PODS_LOG,
                 arguments,
@@ -254,7 +254,7 @@ public class McpContextCollector {
 
         } catch (Exception e) {
             log.warn(LogMessages.Mcp.MCP_CALL_FAILED)
-                .field(McpConstants.LogFields.TOOL, "pods_log")
+                .field(McpConstants.LogFields.TOOL, McpConstants.Tools.PODS_LOG)
                 .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
                 .field(McpConstants.LogFields.ERROR, e.getMessage())
                 .log();
@@ -281,7 +281,7 @@ public class McpContextCollector {
 
         ObjectNode clientInfo = objectMapper.createObjectNode();
         clientInfo.put(McpConstants.Arguments.NAME, McpConstants.CLIENT_NAME);
-        clientInfo.put("version", McpConstants.CLIENT_VERSION);
+        clientInfo.put(McpConstants.Format.VERSION, McpConstants.CLIENT_VERSION);
         params.set(McpConstants.JsonRpc.PARAM_CLIENT_INFO, clientInfo);
 
         ObjectNode capabilities = objectMapper.createObjectNode();
@@ -418,17 +418,17 @@ public class McpContextCollector {
 
         try {
             // Parse YAML/JSON response
-            if (text.contains("phase:")) {
+            if (text.contains(McpConstants.Yaml.PHASE_PREFIX)) {
                 // Extract phase from YAML
-                String[] lines = text.split("\n");
+                String[] lines = text.split(McpConstants.SSE.LINE_SEPARATOR);
                 for (String line : lines) {
-                    if (line.trim().startsWith("phase:")) {
-                        String phase = line.split(":", 2)[1].trim();
+                    if (line.trim().startsWith(McpConstants.Yaml.PHASE_PREFIX)) {
+                        String phase = line.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
 
                         // Also check for container state
                         String containerState = extractContainerState(lines);
                         if (containerState != null) {
-                            return phase + " (" + containerState + ")";
+                            return phase + McpConstants.Format.PARENTHESIS_FORMAT.formatted(containerState);
                         }
                         return phase;
                     }
@@ -447,10 +447,10 @@ public class McpContextCollector {
     private String extractContainerState(String[] lines) {
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
-            if (line.startsWith("reason:") && i > 0) {
+            if (line.startsWith(McpConstants.Yaml.REASON_PREFIX) && i > 0) {
                 String prevLine = lines[i-1].trim();
-                if (prevLine.equals("waiting:") || prevLine.equals("terminated:")) {
-                    return line.split(":", 2)[1].trim();
+                if (prevLine.equals(McpConstants.Yaml.WAITING_STATE) || prevLine.equals(McpConstants.Yaml.TERMINATED_STATE)) {
+                    return line.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
                 }
             }
         }
@@ -477,14 +477,14 @@ public class McpContextCollector {
 
         for (String line : lines) {
             String trimmed = line.trim();
-            if (trimmed.startsWith("Type:")) {
-                currentType = trimmed.split(":", 2)[1].trim();
-            } else if (trimmed.startsWith("Reason:")) {
-                currentReason = trimmed.split(":", 2)[1].trim();
-            } else if (trimmed.startsWith("Message:")) {
-                currentMessage = trimmed.split(":", 2)[1].trim();
-            } else if (trimmed.startsWith("Timestamp:")) {
-                currentTimestamp = trimmed.split(":", 2)[1].trim();
+            if (trimmed.startsWith(McpConstants.Yaml.TYPE_PREFIX)) {
+                currentType = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
+            } else if (trimmed.startsWith(McpConstants.Yaml.REASON_FIELD)) {
+                currentReason = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
+            } else if (trimmed.startsWith(McpConstants.Yaml.MESSAGE_FIELD)) {
+                currentMessage = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
+            } else if (trimmed.startsWith(McpConstants.Yaml.TIMESTAMP_FIELD)) {
+                currentTimestamp = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
 
                 // Print event when we have all fields
                 if (currentType != null && currentReason != null) {
@@ -609,20 +609,20 @@ public class McpContextCollector {
             int indent = line.length() - line.replaceAll("^\\s+", "").length();
 
             // Track status section
-            if (trimmed.equals("status:")) {
+            if (trimmed.equals(McpConstants.Yaml.STATUS_SECTION)) {
                 inStatus = true;
                 inSpec = false;
                 continue;
             }
 
-            if (trimmed.equals("spec:")) {
+            if (trimmed.equals(McpConstants.Yaml.SPEC_SECTION)) {
                 inSpec = true;
                 inStatus = false;
                 continue;
             }
 
             // === Parse status.containerStatuses (for runtime state) ===
-            if (inStatus && trimmed.equals("containerStatuses:")) {
+            if (inStatus && trimmed.equals(McpConstants.Yaml.CONTAINER_STATUSES_SECTION)) {
                 inContainerStatuses = true;
                 containerStatusBaseIndent = indent;
                 continue;
@@ -630,44 +630,44 @@ public class McpContextCollector {
 
             if (inContainerStatuses) {
                 // Found start of first container in containerStatuses
-                if (trimmed.startsWith("- ") && indent == containerStatusBaseIndent + 2) {
+                if (trimmed.startsWith(McpConstants.Yaml.ITEM_PREFIX) && indent == containerStatusBaseIndent + 2) {
                     readingFirstContainerStatus = true;
                     currentIndent = indent;
                     continue;
                 }
 
                 // Stop if we hit another top-level key at same indent as containerStatuses
-                if (indent <= containerStatusBaseIndent && !trimmed.isEmpty() && !trimmed.startsWith("-")) {
+                if (indent <= containerStatusBaseIndent && !trimmed.isEmpty() && !trimmed.startsWith(McpConstants.Yaml.ITEM_PREFIX)) {
                     inContainerStatuses = false;
                     readingFirstContainerStatus = false;
                 }
 
                 if (readingFirstContainerStatus) {
-                    if (trimmed.startsWith("restartCount:")) {
-                        restartCount = trimmed.split(":", 2)[1].trim();
-                    } else if (trimmed.equals("state:")) {
+                    if (trimmed.startsWith(McpConstants.Yaml.RESTART_COUNT_FIELD)) {
+                        restartCount = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
+                    } else if (trimmed.equals(McpConstants.Yaml.STATE_FIELD)) {
                         inStateSection = true;
-                    } else if (inStateSection && trimmed.equals("running:")) {
+                    } else if (inStateSection && trimmed.equals(McpConstants.Yaml.RUNNING_STATE)) {
                         state = "Running";
-                    } else if (inStateSection && trimmed.equals("waiting:")) {
+                    } else if (inStateSection && trimmed.equals(McpConstants.Yaml.WAITING_STATE)) {
                         state = "Waiting";
-                    } else if (inStateSection && trimmed.equals("terminated:")) {
+                    } else if (inStateSection && trimmed.equals(McpConstants.Yaml.TERMINATED_STATE)) {
                         state = "Terminated";
-                    } else if (inStateSection && trimmed.startsWith("startedAt:")) {
-                        startedAt = trimmed.split(":", 2)[1].trim().replace("\"", "");
+                    } else if (inStateSection && trimmed.startsWith(McpConstants.Yaml.STARTED_AT_FIELD)) {
+                        startedAt = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim().replace("\"", "");
                         inStateSection = false;
                     }
                 }
             }
 
             // === Parse spec.containers (for resources) ===
-            if (inSpec && trimmed.equals("containers:")) {
+            if (inSpec && trimmed.equals(McpConstants.Yaml.CONTAINERS_SECTION)) {
                 inSpecContainers = true;
                 specContainerBaseIndent = indent;
                 continue;
             }
 
-            if (inSpec && trimmed.equals("initContainers:")) {
+            if (inSpec && trimmed.equals(McpConstants.Yaml.INIT_CONTAINER_STATUSES_SECTION)) {
                 // Stop reading spec.containers when we hit initContainers
                 inSpecContainers = false;
                 readingFirstSpecContainer = false;
@@ -675,29 +675,29 @@ public class McpContextCollector {
 
             if (inSpecContainers) {
                 // Found start of first container in spec.containers
-                if (trimmed.startsWith("- ") && indent == specContainerBaseIndent + 2) {
+                if (trimmed.startsWith(McpConstants.Yaml.ITEM_PREFIX) && indent == specContainerBaseIndent + 2) {
                     readingFirstSpecContainer = true;
                     currentIndent = indent;
                     continue;
                 }
 
                 if (readingFirstSpecContainer) {
-                    if (trimmed.equals("resources:")) {
+                    if (trimmed.equals(McpConstants.Yaml.RESOURCES_SECTION)) {
                         inResources = true;
-                    } else if (inResources && trimmed.equals("limits:")) {
+                    } else if (inResources && trimmed.equals(McpConstants.Yaml.LIMITS_SECTION)) {
                         inLimits = true;
                         inRequests = false;
-                    } else if (inResources && trimmed.equals("requests:")) {
+                    } else if (inResources && trimmed.equals(McpConstants.Yaml.REQUESTS_SECTION)) {
                         inRequests = true;
                         inLimits = false;
-                    } else if (inLimits && trimmed.startsWith("cpu:")) {
-                        cpuLimit = trimmed.split(":", 2)[1].trim();
-                    } else if (inLimits && trimmed.startsWith("memory:")) {
-                        memoryLimit = trimmed.split(":", 2)[1].trim();
-                    } else if (inRequests && trimmed.startsWith("cpu:")) {
-                        cpuRequest = trimmed.split(":", 2)[1].trim();
-                    } else if (inRequests && trimmed.startsWith("memory:")) {
-                        memoryRequest = trimmed.split(":", 2)[1].trim();
+                    } else if (inLimits && trimmed.startsWith(McpConstants.Yaml.CPU_FIELD)) {
+                        cpuLimit = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
+                    } else if (inLimits && trimmed.startsWith(McpConstants.Yaml.MEMORY_FIELD)) {
+                        memoryLimit = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
+                    } else if (inRequests && trimmed.startsWith(McpConstants.Yaml.CPU_FIELD)) {
+                        cpuRequest = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
+                    } else if (inRequests && trimmed.startsWith(McpConstants.Yaml.MEMORY_FIELD)) {
+                        memoryRequest = trimmed.split(McpConstants.Yaml.COLON_SEPARATOR, McpConstants.Yaml.COLON_SPLIT_LIMIT)[1].trim();
                         // Done with first container
                         readingFirstSpecContainer = false;
                         inSpecContainers = false;
@@ -735,19 +735,19 @@ public class McpContextCollector {
         }
         try {
             // Parse YAML to find: containers: - name: <value>
-            String[] lines = podStatusText.split("\n");
+            String[] lines = podStatusText.split(McpConstants.SSE.LINE_SEPARATOR);
             boolean inContainers = false;
             for (String line : lines) {
                 String trimmed = line.trim();
-                if (trimmed.equals("containers:")) {
+                if (trimmed.equals(McpConstants.Yaml.CONTAINERS_SECTION)) {
                     inContainers = true;
                     continue;
                 }
-                if (inContainers && trimmed.startsWith("- name:")) {
-                    return trimmed.substring("- name:".length()).trim();
+                if (inContainers && trimmed.startsWith(McpConstants.Yaml.ITEM_PREFIX + McpConstants.Arguments.NAME + McpConstants.Yaml.COLON_SEPARATOR)) {
+                    return trimmed.substring((McpConstants.Yaml.ITEM_PREFIX + McpConstants.Arguments.NAME + McpConstants.Yaml.COLON_SEPARATOR).length()).trim();
                 }
                 // Exit containers section if we leave the indentation
-                if (inContainers && !trimmed.startsWith("-") && !trimmed.startsWith("name:")
+                if (inContainers && !trimmed.startsWith(McpConstants.Yaml.ITEM_PREFIX) && !trimmed.startsWith(McpConstants.Arguments.NAME + McpConstants.Yaml.COLON_SEPARATOR)
                     && !line.startsWith(" ") && !line.startsWith("\t")) {
                     break;
                 }
@@ -771,7 +771,7 @@ public class McpContextCollector {
         // Cost recommendations
         try {
             String sessionId = initializeMcpSession(
-                mcpConfig.kruize().endpoint() + "/mcp/",
+                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
                 mcpConfig.kruize().timeoutMs()
             );
 
@@ -782,7 +782,7 @@ public class McpContextCollector {
             }
 
             JsonNode result = callMcpTool(
-                mcpConfig.kruize().endpoint() + "/mcp/",
+                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
                 sessionId,
                 McpConstants.Tools.KRUIZE_GET_COST_RECOMMENDATIONS,
                 arguments,
@@ -807,7 +807,7 @@ public class McpContextCollector {
         // Performance recommendations
         try {
             String sessionId = initializeMcpSession(
-                mcpConfig.kruize().endpoint() + "/mcp/",
+                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
                 mcpConfig.kruize().timeoutMs()
             );
 
@@ -818,7 +818,7 @@ public class McpContextCollector {
             }
 
             JsonNode result = callMcpTool(
-                mcpConfig.kruize().endpoint() + "/mcp/",
+                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
                 sessionId,
                 McpConstants.Tools.KRUIZE_GET_PERF_RECOMMENDATIONS,
                 arguments,
@@ -931,7 +931,7 @@ public class McpContextCollector {
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 String sessionId = initializeMcpSession(
-                    mcpConfig.cryostat().endpoint() + "/mcp",
+                    mcpConfig.cryostat().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                     mcpConfig.cryostat().timeoutMs()
                 );
 
@@ -939,7 +939,7 @@ public class McpContextCollector {
                 arguments.put(McpConstants.Arguments.POD_NAME, podName);
 
                 JsonNode result = callMcpTool(
-                    mcpConfig.cryostat().endpoint() + "/mcp",
+                    mcpConfig.cryostat().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
                     sessionId,
                     toolName,
                     arguments,

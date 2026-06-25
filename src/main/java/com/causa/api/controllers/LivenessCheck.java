@@ -18,6 +18,7 @@ import org.eclipse.microprofile.health.Liveness;
  * @since 1.0.0
  */
 @Liveness
+@Readiness
 public class LivenessCheck implements HealthCheck {
 
     private static final CausaLogger log = CausaLogger.getLogger(LivenessCheck.class);

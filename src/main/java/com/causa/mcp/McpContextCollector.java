@@ -49,6 +49,25 @@ public class McpContextCollector {
     }
 
     /**
+     * Collects context from MCP servers and returns as a formatted string.
+     *
+     * <p>TODO: This is a stub method to be implemented by other developer.
+     * Will collect context from Kubernetes MCP (pod status, events, logs),
+     * Kruize MCP (recommendations), and Cryostat MCP (JFR analysis).
+     *
+     * @param alert the alert to collect context for
+     * @return formatted context string with all diagnostic signals
+     */
+    public String collectContextAsString(Alert alert) {
+        // TODO: Implement full MCP context collection
+        // For now, return placeholder to allow compilation
+        log.warn("collectContextAsString not yet implemented - using placeholder")
+            .field("alertId", alert.getAlertId())
+            .log();
+        return "MCP context collection not yet implemented. This method will be implemented by another developer.";
+    }
+
+    /**
      * Collects context from MCP servers and logs results.
      *
      * <p>Calls Kubernetes MCP for pod status, events, and logs.

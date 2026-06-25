@@ -6,6 +6,7 @@ import com.causa.common.logging.LogMessages;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;
+import org.eclipse.microprofile.health.Readiness;
 
 /**
  * Liveness Health Check

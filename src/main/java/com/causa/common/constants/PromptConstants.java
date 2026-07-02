@@ -23,9 +23,13 @@ public final class PromptConstants {
     public static final String KEY_DESCRIPTION = "description";
 
     /**
-     * Default model type fallback
+     * Default model type fallback - uses the same value as LLMConstants.Provider.VERTEX_AI_ANTHROPIC
+     * to maintain consistency across the codebase.
+     *
+     * <p>This is used only when a model-specific prompt template is not found in YAML.
+     * The actual LLM provider is determined at runtime from LLMConfig.
      */
-    public static final String DEFAULT_MODEL_TYPE = "vertex-ai-anthropic";
+    public static final String DEFAULT_MODEL_TYPE = LLMConstants.Provider.VERTEX_AI_ANTHROPIC;
 
     /**
      * Template placeholder strings

@@ -5,13 +5,18 @@ import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
 import com.causa.core.domain.Alert;
 import com.causa.core.domain.Diagnostic;
+import com.causa.core.domain.RootCauseAnalysis;
+import com.causa.core.domain.validation.ValidatedRCA;
+import com.causa.core.domain.validation.ValidationResult;
 import com.causa.core.ports.DiagnosticRepository;
 import com.causa.core.services.DiagnosticService;
+import com.causa.core.services.validation.RcaValidator;
 import com.causa.mcp.McpContextCollector;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * Diagnostic Service Implementation
@@ -27,12 +32,17 @@ public class DiagnosticServiceImpl implements DiagnosticService {
 
     private final DiagnosticRepository diagnosticRepository;
     private final McpContextCollector mcpContextCollector;
+    private final Optional<RcaValidator> rcaValidator;
 
     @Inject
-    public DiagnosticServiceImpl(DiagnosticRepository diagnosticRepository,
-                                  McpContextCollector mcpContextCollector) {
+    public DiagnosticServiceImpl(
+        DiagnosticRepository diagnosticRepository,
+        McpContextCollector mcpContextCollector,
+        Optional<RcaValidator> rcaValidator
+    ) {
         this.diagnosticRepository = diagnosticRepository;
         this.mcpContextCollector = mcpContextCollector;
+        this.rcaValidator = rcaValidator;
     }
 
     @Override
@@ -148,25 +158,120 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     }
 
     /**
-     * Placeholder: Validates LLM output using hybrid validation engine.
+     * Validates RCA output against diagnostic context.
      *
-     * <p>Future implementation will:
+     * <p>Uses assertion-driven validation to verify each claim in the RCA
+     * against the collected diagnostic context. Validates:
      * <ul>
-     *   <li>Verify LLM provided evidence citations</li>
-     *   <li>Apply deterministic sanity checks against metrics</li>
-     *   <li>Run critic LLM for adversarial validation</li>
+     *   <li>Observations and facts against K8s events and metrics</li>
+     *   <li>Trends against time-series data</li>
+     *   <li>Causal relationships against evidence chains</li>
+     *   <li>Configuration claims against actual settings</li>
      * </ul>
      *
      * @param alert the alert being analyzed
+     * @param rca the root cause analysis to validate
+     * @param diagnosticContext the collected MCP context
+     * @return validated RCA with assertion-level validation results
      */
-    private void validateRca(Alert alert) {
-        log.debug(LogMessages.Diagnostic.RCA_VALIDATION_STARTED)
+    private ValidatedRCA validateRca(Alert alert, RootCauseAnalysis rca, String diagnosticContext) {
+        log.info(LogMessages.Diagnostic.RCA_VALIDATION_STARTED)
             .field("alertId", alert.getAlertId())
+            .field("issueTitle", rca.issueTitle())
             .log();
 
-        // TODO: Implement hybrid validation
-        // - Evidence assertion verification
-        // - Rule-based metric validation
-        // - Optional critic LLM pass
+        // Check if validator is available
+        if (rcaValidator.isEmpty()) {
+            log.warn("RCA validator not available, skipping validation")
+                .field("alertId", alert.getAlertId())
+                .log();
+
+            // Return unvalidated RCA wrapped in ValidatedRCA with no validation results
+            return ValidatedRCA.builder()
+                .originalRca(rca)
+                .validationResults(java.util.List.of())
+                .validatedAt(Instant.now())
+                .build();
+        }
+
+        // Perform validation
+        ValidatedRCA validatedRCA = rcaValidator.get().validate(rca, diagnosticContext);
+
+        // Log validation results
+        logValidationResults(validatedRCA);
+
+        // Log validation summary
+        log.info("RCA validation completed")
+            .field("alertId", alert.getAlertId())
+            .field("validationSummary", validatedRCA.summary().toSummaryString())
+            .field("isValid", validatedRCA.isValid())
+            .field("isHighConfidence", validatedRCA.isHighConfidence())
+            .field("supportedAssertions", validatedRCA.getSupportedAssertions().size())
+            .field("unsupportedAssertions", validatedRCA.getUnsupportedAssertions().size())
+            .field("unknownAssertions", validatedRCA.getUnknownAssertions().size())
+            .log();
+
+        return validatedRCA;
+    }
+
+    /**
+     * Logs detailed validation results for each assertion.
+     */
+    private void logValidationResults(ValidatedRCA validatedRCA) {
+        log.info("\n" + "=".repeat(80))
+            .log();
+        log.info("RCA VALIDATION RESULTS")
+            .log();
+        log.info("=".repeat(80))
+            .log();
+
+        // Log each assertion's validation result
+        for (ValidationResult result : validatedRCA.validationResults()) {
+            String statusSymbol = switch (result.status()) {
+                case SUPPORTED -> "✓";
+                case PARTIALLY_SUPPORTED -> "~";
+                case UNSUPPORTED -> "✗";
+                case UNKNOWN -> "?";
+            };
+
+            log.info(String.format("[%s] %s", statusSymbol, result.assertion().text()))
+                .field("assertionId", result.assertion().id())
+                .field("type", result.assertion().type())
+                .field("source", result.assertion().source())
+                .field("status", result.status())
+                .field("confidence", String.format("%.2f", result.confidence()))
+                .field("supportingEvidence", result.supportingEvidence().size())
+                .field("refutingEvidence", result.refutingEvidence().size())
+                .log();
+
+            // Log evidence details if present
+            if (!result.supportingEvidence().isEmpty()) {
+                for (int i = 0; i < result.supportingEvidence().size(); i++) {
+                    var evidence = result.supportingEvidence().get(i);
+                    log.debug(String.format("  Evidence %d: %s (relevance: %.2f)",
+                        i + 1,
+                        evidence.snippet().substring(0, Math.min(100, evidence.snippet().length())),
+                        evidence.relevanceScore()))
+                        .field("evidenceSource", evidence.source())
+                        .field("evidenceType", evidence.type())
+                        .log();
+                }
+            }
+
+            // Log explanation
+            result.explanation().ifPresent(explanation ->
+                log.debug("  Explanation: " + explanation)
+                    .log()
+            );
+        }
+
+        log.info("=".repeat(80))
+            .log();
+        log.info("VALIDATION SUMMARY")
+            .log();
+        log.info(validatedRCA.summary().toSummaryString())
+            .log();
+        log.info("=".repeat(80))
+            .log();
     }
 }

@@ -98,17 +98,12 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             .log();
 
         // TODO: Trigger async diagnostic pipeline
-        // For now, just call methods synchronously
-        collectContext(alert); // Logs context to console (existing MCP integration)
-        String contextForLLM = buildContextForLLM(alert); // Build formatted context for LLM
-        RootCauseAnalysis rca = performRootCauseAnalysis(alert, contextForLLM);
+        // For now, call diagnostic pipeline synchronously
 
-        // TODO: Store RCA result in database
-        // TODO: validateRca(alert, rca);
-        // For now, just call placeholder methods synchronously
+        // Step 1: Collect diagnostic context from MCP servers (K8s, Kruize, Cryostat)
         DiagnosticContext diagnosticContext = collectContext(alert);
 
-        // Log the complete collected context for visibility
+        // Log context collection summary
         log.info(LogMessages.Diagnostic.CONTEXT_COLLECTED)
             .field(Fields.DIAGNOSTIC_ID, diagnosticId)
             .field(LogFields.ALERT_ID, alert.getAlertId())
@@ -117,9 +112,10 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             .field(LogFields.HAS_CRYOSTAT_CONTEXT, diagnosticContext.hasCryostatContext())
             .log();
 
+        // Step 2: Convert context to formatted string for LLM
         String contextForLLM = diagnosticContext.toString();
         String separator = ContextConstants.SEPARATOR_CHAR.repeat(ContextConstants.SEPARATOR_LENGTH);
-        
+
         // Log the full formatted context that will be sent to LLM
         log.info(ContextConstants.NEWLINE + separator + ContextConstants.NEWLINE +
                  ContextConstants.CONTEXT_LOG_HEADER + ContextConstants.NEWLINE +
@@ -129,35 +125,16 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             .field(Fields.DIAGNOSTIC_ID, diagnosticId)
             .log();
 
-        determineDiagnosisType(alert);
-        performRootCauseAnalysis(alert);
-        validateRca(alert);
+        // Step 3: Perform root cause analysis using LLM
+        RootCauseAnalysis rca = performRootCauseAnalysis(alert, contextForLLM);
+
+        // TODO: Step 4: Validate RCA against collected context
+        // validateRca(alert, rca, contextForLLM);
+
+        // TODO: Step 5: Store RCA result in database
+        // diagnosticRepository.saveRca(diagnosticId, rca);
 
         return diagnostic;
-    }
-
-    /**
-     * Builds context string to be sent to LLM.
-     *
-     * <p>Collects diagnostic context from MCP servers and formats as structured string.
-     *
-     * @param alert the alert to build context for
-     * @return formatted context string for LLM
-     */
-    private String buildContextForLLM(Alert alert) {
-        log.debug("Building LLM context")
-            .field("alertId", alert.getAlertId())
-            .log();
-
-        // Collect context from MCP servers
-        String contextString = mcpContextCollector.collectContextAsString(alert);
-
-        log.debug(LogMessages.Diagnostic.LLM_CONTEXT_BUILT)
-            .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
-            .field("contextLength", contextString.length())
-            .log();
-
-        return contextString;
     }
 
     /**
@@ -199,15 +176,15 @@ public class DiagnosticServiceImpl implements DiagnosticService {
 
             log.info(LogMessages.Diagnostic.RCA_PROMPT_BUILT)
                 .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
-                .field("systemPromptLength", systemPrompt.length())
-                .field("userPromptLength", userPrompt.length())
+                .field(DiagnosticConstants.FIELD_SYSTEM_PROMPT_LENGTH, systemPrompt.length())
+                .field(DiagnosticConstants.FIELD_USER_PROMPT_LENGTH, userPrompt.length())
                 .log();
 
             log.debug("Context and prompts prepared")
-                .field("alertId", alert.getAlertId())
-                .field("contextLength", contextString.length())
-                .field("systemPromptLength", systemPrompt.length())
-                .field("userPromptLength", userPrompt.length())
+                .field(DiagnosticConstants.FIELD_ALERT_ID, alert.getAlertId())
+                .field(DiagnosticConstants.FIELD_CONTEXT_LENGTH, contextString.length())
+                .field(DiagnosticConstants.FIELD_SYSTEM_PROMPT_LENGTH, systemPrompt.length())
+                .field(DiagnosticConstants.FIELD_USER_PROMPT_LENGTH, userPrompt.length())
                 .log();
 
             // Build LLM request
@@ -304,26 +281,35 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     }
 
     /**
-     * Validates LLM output using hybrid validation engine.
+     * Validates RCA output against collected diagnostic context.
      *
-     * <p>Future implementation will:
+     * <p>NOTE: This is a placeholder. The actual validation framework is in branch rca-validation-impl.
+     * When merged, this should be replaced with:
+     * <pre>
+     * private ValidatedRCA validateRca(Alert alert, RootCauseAnalysis rca, String diagnosticContext) {
+     *     return rcaValidator.get().validate(rca, diagnosticContext);
+     * }
+     * </pre>
+     *
+     * <p>Validation framework features:
      * <ul>
-     *   <li>Verify LLM provided evidence citations</li>
-     *   <li>Apply deterministic sanity checks against metrics</li>
-     *   <li>Run critic LLM for adversarial validation</li>
+     *   <li>Assertion extraction from RCA (rule-based or LLM-powered)</li>
+     *   <li>Evidence matching against diagnostic context</li>
+     *   <li>LLM-based assertion analysis with targeted questions</li>
+     *   <li>Confidence scoring and validation results</li>
      * </ul>
      *
      * @param alert the alert being analyzed
      * @param rca the RCA result to validate
+     * @deprecated Use 3-parameter version: validateRca(Alert, RootCauseAnalysis, String)
      */
+    @Deprecated(since = "0.0.1", forRemoval = true)
     private void validateRca(Alert alert, RootCauseAnalysis rca) {
         log.debug(LogMessages.Diagnostic.RCA_VALIDATION_STARTED)
             .field("alertId", alert.getAlertId())
             .log();
 
-        // TODO: Implement hybrid validation
-        // - Evidence assertion verification
-        // - Rule-based metric validation
-        // - Optional critic LLM pass
+        // TODO: Remove this placeholder when RCA validation framework is merged
+        // See branch: rca-validation-impl
     }
 }

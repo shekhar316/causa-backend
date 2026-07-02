@@ -3,6 +3,9 @@ package com.causa.core.services.impl;
 import com.causa.common.constants.DiagnosticConstants;
 import com.causa.common.constants.DiagnosticConstants.DiagnosticStatus;
 import com.causa.common.constants.JsonParsingConstants;
+import com.causa.common.constants.ContextConstants;
+import com.causa.common.constants.DiagnosticConstants.Fields;
+import com.causa.common.constants.McpConstants.LogFields;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
 import com.causa.config.LLMConfig;
@@ -21,6 +24,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import com.causa.core.domain.DiagnosticContext;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -101,6 +105,33 @@ public class DiagnosticServiceImpl implements DiagnosticService {
 
         // TODO: Store RCA result in database
         // TODO: validateRca(alert, rca);
+        // For now, just call placeholder methods synchronously
+        DiagnosticContext diagnosticContext = collectContext(alert);
+
+        // Log the complete collected context for visibility
+        log.info(LogMessages.Diagnostic.CONTEXT_COLLECTED)
+            .field(Fields.DIAGNOSTIC_ID, diagnosticId)
+            .field(LogFields.ALERT_ID, alert.getAlertId())
+            .field(LogFields.HAS_K8S_CONTEXT, diagnosticContext.hasKubernetesContext())
+            .field(LogFields.HAS_KRUIZE_CONTEXT, diagnosticContext.hasKruizeContext())
+            .field(LogFields.HAS_CRYOSTAT_CONTEXT, diagnosticContext.hasCryostatContext())
+            .log();
+
+        String contextForLLM = diagnosticContext.toString();
+        String separator = ContextConstants.SEPARATOR_CHAR.repeat(ContextConstants.SEPARATOR_LENGTH);
+        
+        // Log the full formatted context that will be sent to LLM
+        log.info(ContextConstants.NEWLINE + separator + ContextConstants.NEWLINE +
+                 ContextConstants.CONTEXT_LOG_HEADER + ContextConstants.NEWLINE +
+                 separator + ContextConstants.NEWLINE +
+                 contextForLLM +
+                 separator + ContextConstants.NEWLINE)
+            .field(Fields.DIAGNOSTIC_ID, diagnosticId)
+            .log();
+
+        determineDiagnosisType(alert);
+        performRootCauseAnalysis(alert);
+        validateRca(alert);
 
         return diagnostic;
     }
@@ -130,19 +161,20 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     }
 
     /**
-     * Collects context from MCP servers and logs results.
+     * Collects diagnostic context from all MCP servers (Kubernetes, Cryostat, Kruize).
      *
-     * <p>Calls Kubernetes MCP for pod status, events, and logs.
-     * This method logs context to console for debugging.
+     * <p>Aggregates pod status, events, logs, resource recommendations, and JFR analysis
+     * from multiple MCP servers into a single {@link com.causa.core.domain.DiagnosticContext} object.
      *
      * @param alert the alert to collect context for
+     * @return diagnostic context with all collected data
      */
-    private void collectContext(Alert alert) {
+    private DiagnosticContext collectContext(Alert alert) {
         log.debug(LogMessages.Diagnostic.CONTEXT_COLLECTION_STARTED)
             .field("alertId", alert.getAlertId())
             .log();
 
-        mcpContextCollector.collectAndLogContext(alert);
+        return mcpContextCollector.collectContext(alert);
     }
 
     /**

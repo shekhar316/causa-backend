@@ -19,6 +19,21 @@ public final class DiagnosticConstants {
     public static final String FIELD_ALERT_ID = "alertId";
     public static final String FIELD_DIAGNOSTIC_ID = "diagnosticId";
     public static final String FIELD_STATUS = "status";
+     * Logging field names for diagnostics.
+     */
+    public static final class Fields {
+        private Fields() {}
+
+        public static final String DIAGNOSTIC_ID = "diagnosticId";
+    }
+
+    // Logging format constants
+    public static final int SEPARATOR_LENGTH = 80;
+    public static final String SEPARATOR_CHAR = "=";
+    public static final String CONTEXT_HEADER = "COLLECTED DIAGNOSTIC CONTEXT (LLM-Ready)";
+    public static final String NEWLINE = "\n";
+
+
 
     /**
      * Diagnostic Status

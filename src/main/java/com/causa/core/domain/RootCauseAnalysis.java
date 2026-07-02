@@ -1,57 +1,110 @@
 package com.causa.core.domain;
 
-import java.util.Collections;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
-import java.util.ArrayList;
 
 /**
  * Root Cause Analysis Domain Model
  *
- * <p>Represents the structured RCA output produced by the LLM for a given alert.
+ * <p>Represents the structured output from the LLM-based RCA process.
+ * This matches the expected JSON schema from the RCA prompt template.
  *
  * @since 0.0.1
  */
 public record RootCauseAnalysis(
+    @JsonProperty("issue_title")
     String issueTitle,
-    String anomalyType,
-    String rootCause,
+
+    @JsonProperty("issue_description")
     String issueDescription,
+
+    @JsonProperty("technical_description")
     String technicalDescription,
-    List<PossibleSolution> possibleSolutions
+
+    @JsonProperty("anomaly_type")
+    AnomalyType anomalyType,
+
+    @JsonProperty("root_cause")
+    String rootCause,
+
+    @JsonProperty("supporting_logs")
+    List<String> supportingLogs,
+
+    @JsonProperty("evidences")
+    List<String> evidences,
+
+    @JsonProperty("possible_solutions")
+    List<Solution> possibleSolutions,
+
+    @JsonProperty("llm_confidence_score_for_rca")
+    @NotNull(message = "RCA confidence score is required")
+    @DecimalMin(value = "0.0", message = "RCA confidence score must be >= 0.0")
+    @DecimalMax(value = "1.0", message = "RCA confidence score must be <= 1.0")
+    Double llmConfidenceScoreForRca,
+
+    @JsonProperty("llm_confidence_score_for_solution")
+    @NotNull(message = "Solution confidence score is required")
+    @DecimalMin(value = "0.0", message = "Solution confidence score must be >= 0.0")
+    @DecimalMax(value = "1.0", message = "Solution confidence score must be <= 1.0")
+    Double llmConfidenceScoreForSolution,
+
+    @JsonProperty("confidence_summary")
+    String confidenceSummary,
+
+    @JsonProperty("llm_notes")
+    String llmNotes
 ) {
 
-    public RootCauseAnalysis {
-        if (issueTitle == null || issueTitle.isBlank()) {
-            throw new IllegalArgumentException("issueTitle cannot be blank");
-        }
-        if (possibleSolutions == null) {
-            possibleSolutions = Collections.emptyList();
-        } else {
-            possibleSolutions = Collections.unmodifiableList(new ArrayList<>(possibleSolutions));
-        }
+    /**
+     * Anomaly Type Classification
+     */
+    public enum AnomalyType {
+        @JsonProperty("OOM_KILLED")
+        OOM_KILLED,
+
+        @JsonProperty("POSSIBLE_OOM_KILLED")
+        POSSIBLE_OOM_KILLED,
+
+        @JsonProperty("POSSIBLE_GC_PAUSE")
+        POSSIBLE_GC_PAUSE,
+
+        @JsonProperty("HEALTHY")
+        HEALTHY
     }
 
     /**
-     * A possible solution entry within the RCA.
-     *
-     * @param solution the solution description text
-     * @param priority optional priority ordering (lower = higher priority)
+     * Solution Record
      */
-    public record PossibleSolution(
+    public record Solution(
+        @JsonProperty("solution")
         String solution,
-        Integer priority
+
+        @JsonProperty("justification")
+        String justification,
+
+        @JsonProperty("success_probability")
+        SuccessProbability successProbability,
+
+        @JsonProperty("implementation_notes")
+        String implementationNotes
     ) {
-        public PossibleSolution {
-            if (solution == null || solution.isBlank()) {
-                throw new IllegalArgumentException("Solution text cannot be blank");
-            }
-        }
 
         /**
-         * Creates a solution with no priority set.
+         * Success Probability Enum
          */
-        public static PossibleSolution of(String solution) {
-            return new PossibleSolution(solution, null);
+        public enum SuccessProbability {
+            @JsonProperty("High")
+            HIGH,
+
+            @JsonProperty("Medium")
+            MEDIUM,
+
+            @JsonProperty("Low")
+            LOW
         }
     }
 }

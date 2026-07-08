@@ -21,11 +21,14 @@ public final class AppConstants {
     public static final class StartupConstants {
         private StartupConstants() {}
 
-        /** LLM initialization priority. */
-        public static final int LLM_PRIORITY = 10;
+        /** Database connection pool initialization priority — must run first. */
+        public static final int DATABASE_PRIORITY = 5;
 
-        /** Database connection pool initialization priority. */
-        public static final int DATABASE_PRIORITY = 20;
+        /** Config cache bootstrap priority — runs after DB pool is live. */
+        public static final int CONFIG_PRIORITY = 10;
+
+        /** LLM initialization priority — runs after config is loaded. */
+        public static final int LLM_PRIORITY = 20;
     }
 
     /**

@@ -78,7 +78,7 @@ quarkus:
     database:
       generation: none
     log:
-      sql: true
+      sql: false
     # Fix for Jackson date serialization compatibility
     mapping:
       format:

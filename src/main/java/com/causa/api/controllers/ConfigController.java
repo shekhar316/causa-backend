@@ -2,6 +2,7 @@ package com.causa.api.controllers;
 
 import com.causa.api.dto.request.ConfigUpdateRequest;
 import com.causa.common.constants.LLMConstants;
+import com.causa.common.utils.ValidationUtils;
 import com.causa.api.dto.response.ConfigUpdateResponse;
 import com.causa.api.dto.response.ConfigResponse;
 import com.causa.api.dto.response.ErrorResponse;
@@ -208,6 +209,10 @@ public class ConfigController {
                 invalidValues.add(k + "=" + v + " (accepted: " + LLMConstants.Provider.ALL + ")");
             } else if (ConfigConstants.LLM.MODEL_NAME.equals(k) && !LLMConstants.ModelNames.ALL.contains(v)) {
                 invalidValues.add(k + "=" + v + " (accepted: " + LLMConstants.ModelNames.ALL + ")");
+            } else if (ConfigConstants.isIntegerKey(k) && !ValidationUtils.isValidInteger(v)) {
+                invalidValues.add(k + "=" + v + " (must be a valid integer)");
+            } else if (ConfigConstants.isDoubleKey(k) && !ValidationUtils.isValidDouble(v)) {
+                invalidValues.add(k + "=" + v + " (must be a valid number)");
             }
         }
 

@@ -4,7 +4,7 @@ import com.causa.api.dto.request.AlertWebhookRequest;
 import com.causa.common.constants.AlertConstants;
 import com.causa.common.constants.AlertConstants.AlertSeverity;
 import com.causa.common.constants.AlertConstants.AlertStatus;
-import com.causa.config.AlertConfig;
+import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -27,8 +27,8 @@ public class AlertMapper {
     private final String defaultSeverity;
 
     @Inject
-    public AlertMapper(AlertConfig alertConfig) {
-        this.defaultSeverity = alertConfig.filterSeverity();
+    public AlertMapper(AppConfig appConfig) {
+        this.defaultSeverity = appConfig.getAlertConfig().getFilterSeverity();
     }
 
     /**

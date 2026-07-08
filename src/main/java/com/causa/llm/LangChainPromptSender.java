@@ -4,6 +4,7 @@ import com.causa.common.constants.LLMConstants;
 import com.causa.common.exceptions.LLMException;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
+import com.causa.config.AppConfig;
 import com.causa.config.LLMConfig;
 import com.causa.core.domain.LLMRequest;
 import com.causa.core.domain.LLMResponse;
@@ -42,19 +43,19 @@ public class LangChainPromptSender implements PromptSender {
     private static final CausaLogger log = CausaLogger.getLogger(LangChainPromptSender.class);
 
     private final ChatModel chatModel;
-    private final LLMConfig config;
+    private final AppConfig appConfig;
 
     @Inject
-    public LangChainPromptSender(ChatModel chatModel, LLMConfig config) {
+    public LangChainPromptSender(ChatModel chatModel, AppConfig appConfig) {
         this.chatModel = chatModel;
-        this.config = config;
+        this.appConfig = appConfig;
     }
 
     @Override
     public LLMResponse send(LLMRequest request) {
         if (!isReady()) {
             log.error(LogMessages.LLM.MODEL_NOT_AVAILABLE)
-                .field(LLMConstants.Fields.PROVIDER, config.provider().orElse("(not configured)"))
+                .field(LLMConstants.Fields.PROVIDER, appConfig.getLlmConfig().getProvider().orElse("(not configured)"))
                 .log();
             throw new LLMException(
                 LLMConstants.ErrorMessages.MODEL_NOT_AVAILABLE,
@@ -63,7 +64,7 @@ public class LangChainPromptSender implements PromptSender {
         }
 
         log.info(LogMessages.LLM.PROMPT_SEND_START)
-            .field(LLMConstants.Fields.PROVIDER, config.provider().orElse("(not configured)"))
+            .field(LLMConstants.Fields.PROVIDER, appConfig.getLlmConfig().getProvider().orElse("(not configured)"))
             .field(LLMConstants.Fields.MODEL, resolveModel(request))
             .log();
 
@@ -135,7 +136,7 @@ public class LangChainPromptSender implements PromptSender {
 
     @Override
     public boolean isReady() {
-        return chatModel != null && config.modelName().filter(m -> !m.isBlank()).isPresent();
+        return chatModel != null && appConfig.getLlmConfig().getModelName().filter(m -> !m.isBlank()).isPresent();
     }
 
     /**
@@ -212,6 +213,6 @@ public class LangChainPromptSender implements PromptSender {
      * @return the model name
      */
     private String resolveModel(LLMRequest request) {
-        return request.modelOverride().orElse(config.modelName().orElse(""));
+        return request.modelOverride().orElse(appConfig.getLlmConfig().getModelName().orElse(""));
     }
 }

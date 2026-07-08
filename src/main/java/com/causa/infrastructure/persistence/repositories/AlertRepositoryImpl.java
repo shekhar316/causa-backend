@@ -36,9 +36,12 @@ public class AlertRepositoryImpl implements AlertRepository {
     @Transactional
     public void updateHasDiagnostics(String alertId, boolean hasDiagnostics) {
         try {
+            // AlertEntity has no hasDiagnostics column — update status to PROCESSING/PROCESSED
+            // to reflect that diagnostics are in progress or complete.
+            String newStatus = hasDiagnostics ? "PROCESSED" : "ACCEPTED";
             int updated = AlertEntity.update(
-                AlertEntity.Fields.HAS_DIAGNOSTICS + " = ?1 where " + AlertEntity.Fields.ALERT_ID + " = ?2",
-                hasDiagnostics,
+                AlertEntity.Fields.STATUS + " = ?1 where " + AlertEntity.Fields.ALERT_ID + " = ?2",
+                newStatus,
                 alertId);
 
             if (updated == 0) {

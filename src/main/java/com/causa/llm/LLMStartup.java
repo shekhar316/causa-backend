@@ -4,6 +4,7 @@ import com.causa.common.constants.AppConstants;
 import com.causa.common.constants.LLMConstants;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
+import com.causa.config.AppConfig;
 import com.causa.config.LLMConfig;
 import com.causa.core.domain.LLMRequest;
 import com.causa.core.domain.LLMResponse;
@@ -29,17 +30,18 @@ public class LLMStartup {
     private static final CausaLogger log = CausaLogger.getLogger(LLMStartup.class);
 
     private final PromptSender promptSender;
-    private final LLMConfig config;
+    private final AppConfig appConfig;
 
     @Inject
-    public LLMStartup(PromptSender promptSender, LLMConfig config) {
+    public LLMStartup(PromptSender promptSender, AppConfig appConfig) {
         this.promptSender = promptSender;
-        this.config = config;
+        this.appConfig = appConfig;
     }
 
     void onStartup(@Observes @Priority(AppConstants.StartupConstants.LLM_PRIORITY) StartupEvent event) {
-        String provider = config.provider().orElse("(not configured)");
-        String modelName = config.modelName().orElse("(not configured)");
+        LLMConfig config = appConfig.getLlmConfig();
+        String provider = config.getProvider().orElse("(not configured)");
+        String modelName = config.getModelName().orElse("(not configured)");
 
         log.info(LogMessages.LLM.CONNECTIVITY_CHECK_START)
             .field(LLMConstants.Fields.PROVIDER, provider)
@@ -52,10 +54,10 @@ public class LLMStartup {
             log.info(LogMessages.LLM.LLM_READY)
                 .field(LLMConstants.Fields.PROVIDER, provider)
                 .field(LLMConstants.Fields.MODEL, modelName)
-                .field(LLMConstants.Fields.AUTH_TYPE, config.authType().orElse("NOT_SET"))
-                .field(LLMConstants.Fields.TEMPERATURE, config.temperature())
-                .field(LLMConstants.Fields.MAX_TOKENS, config.maxTokens())
-                .field(LLMConstants.Fields.TIMEOUT_SECONDS, config.timeoutSeconds())
+                .field(LLMConstants.Fields.AUTH_TYPE, config.getAuthType().orElse("NOT_SET"))
+                .field(LLMConstants.Fields.TEMPERATURE, config.getTemperature())
+                .field(LLMConstants.Fields.MAX_TOKENS, config.getMaxTokens())
+                .field(LLMConstants.Fields.TIMEOUT_SECONDS, config.getTimeoutSeconds())
                 .log();
         } else {
             log.warn(LogMessages.LLM.LLM_STARTUP_FAILED)
@@ -70,7 +72,7 @@ public class LLMStartup {
      * @return true if the LLM responded successfully, false otherwise
      */
     private boolean verifyConnectivity() {
-        String provider = config.provider().orElse("(not configured)");
+        String provider = appConfig.getLlmConfig().getProvider().orElse("(not configured)");
         try {
             // Check if provider is ready first
             if (!promptSender.isReady()) {

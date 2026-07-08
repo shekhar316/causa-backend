@@ -7,12 +7,23 @@ import com.causa.infrastructure.persistence.entity.AlertEntity;
 import com.causa.infrastructure.persistence.entity.DiagnosticEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.time.Instant;
 
 /**
  * Diagnostic Entity Mapper
  *
  * <p>Maps between Diagnostic domain model and DiagnosticEntity JPA entity.
- * <p>Handles JSON conversion between String (domain) and JsonNode (entity).
+ * <p>Bridges field-name differences between the domain model and the DB schema.
+ *
+ * <ul>
+ *   <li>{@code diagnosticId}   ↔ {@code id}</li>
+ *   <li>{@code generatedAt}    ↔ stored in {@code diagnosticsMetadata.generatedAt}</li>
+ *   <li>{@code confidenceScore}↔ stored in {@code confidenceInfo.score}</li>
+ *   <li>{@code faultDomain}    ↔ {@code issueType}</li>
+ *   <li>{@code rootCauseAnalysis} ↔ {@code rootCauseSummary}</li>
+ * </ul>
  *
  * @since 0.0.1
  */
@@ -36,30 +47,37 @@ public final class DiagnosticEntityMapper {
         }
 
         DiagnosticEntity entity = new DiagnosticEntity();
-        entity.setDiagnosticId(diagnostic.getDiagnosticId());
+        entity.setId(diagnostic.getDiagnosticId());
 
-        // Create AlertEntity reference for the foreign key relationship
-        AlertEntity alertEntity = new AlertEntity();
-        alertEntity.setAlertId(diagnostic.getAlertId());
-        entity.setAlert(alertEntity);
+        // Create AlertEntity reference for the FK relationship
+        AlertEntity alertRef = new AlertEntity();
+        alertRef.setId(diagnostic.getAlertId());
+        entity.setAlert(alertRef);
 
         entity.setStatus(diagnostic.getStatus().getValue());
-        entity.setGeneratedAt(diagnostic.getGeneratedAt());
-        entity.setConfidenceScore(diagnostic.getConfidenceScore());
 
+        // faultDomain → issueType
         if (diagnostic.getFaultDomain() != null) {
-            entity.setFaultDomain(diagnostic.getFaultDomain().getValue());
+            entity.setIssueType(diagnostic.getFaultDomain().getValue());
         }
 
-        // Convert String JSON to JsonNode
+        // rootCauseAnalysis (JSON string) → rootCauseSummary
         if (diagnostic.getRootCauseAnalysis() != null) {
-            try {
-                JsonNode jsonNode = objectMapper.readTree(diagnostic.getRootCauseAnalysis());
-                entity.setRootCauseAnalysis(jsonNode);
-            } catch (Exception e) {
-                // If parsing fails, store null (invalid JSON)
-                entity.setRootCauseAnalysis(null);
-            }
+            entity.setRootCauseSummary(diagnostic.getRootCauseAnalysis());
+        }
+
+        // confidenceScore → confidenceInfo JSONB
+        if (diagnostic.getConfidenceScore() != null) {
+            ObjectNode confidenceNode = objectMapper.createObjectNode();
+            confidenceNode.put("score", diagnostic.getConfidenceScore());
+            entity.setConfidenceInfo(confidenceNode);
+        }
+
+        // generatedAt → diagnosticsMetadata JSONB
+        if (diagnostic.getGeneratedAt() != null) {
+            ObjectNode meta = objectMapper.createObjectNode();
+            meta.put("generatedAt", diagnostic.getGeneratedAt().toEpochMilli());
+            entity.setDiagnosticsMetadata(meta);
         }
 
         return entity;
@@ -77,25 +95,32 @@ public final class DiagnosticEntityMapper {
         }
 
         Diagnostic.Builder builder = Diagnostic.builder()
-            .diagnosticId(entity.getDiagnosticId())
-            .alertId(entity.getAlertId())  // Uses helper method to avoid loading full Alert
-            .status(DiagnosticStatus.fromString(entity.getStatus()))
-            .generatedAt(entity.getGeneratedAt())
-            .confidenceScore(entity.getConfidenceScore());
+            .diagnosticId(entity.getId())
+            .alertId(entity.getAlertId())
+            .status(DiagnosticStatus.fromString(entity.getStatus()));
 
-        if (entity.getFaultDomain() != null) {
-            builder.faultDomain(FaultDomain.fromString(entity.getFaultDomain()));
+        // issueType → faultDomain
+        if (entity.getIssueType() != null) {
+            builder.faultDomain(FaultDomain.fromString(entity.getIssueType()));
         }
 
-        // Convert JsonNode to String JSON
-        if (entity.getRootCauseAnalysis() != null) {
-            try {
-                String jsonString = objectMapper.writeValueAsString(entity.getRootCauseAnalysis());
-                builder.rootCauseAnalysis(jsonString);
-            } catch (Exception e) {
-                // If serialization fails, store null
-                builder.rootCauseAnalysis(null);
-            }
+        // rootCauseSummary → rootCauseAnalysis
+        if (entity.getRootCauseSummary() != null) {
+            builder.rootCauseAnalysis(entity.getRootCauseSummary());
+        }
+
+        // confidenceInfo JSONB → confidenceScore
+        JsonNode ci = entity.getConfidenceInfo();
+        if (ci != null && ci.has("score")) {
+            builder.confidenceScore(ci.get("score").floatValue());
+        }
+
+        // diagnosticsMetadata JSONB → generatedAt
+        JsonNode meta = entity.getDiagnosticsMetadata();
+        if (meta != null && meta.has("generatedAt")) {
+            builder.generatedAt(Instant.ofEpochMilli(meta.get("generatedAt").asLong()));
+        } else {
+            builder.generatedAt(Instant.now());
         }
 
         return builder.build();

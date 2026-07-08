@@ -10,7 +10,7 @@
 --   feedback      → fdbk_<16>
 --   configurations → cnfg_<16>
 --   integrations  → intg_<16>
---   health_checks → created_at TIMESTAMP (PK, no surrogate ID)
+--   health_checks → hchk_<16>
 --
 -- IDs are generated and validated by the application layer.
 -- =============================================================================
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS diagnostics (
 
     -- Structured array of actionable remediation steps
     -- Each element: { solution, justification, success_probability, implementation_notes }
-    recommendations     JSONB,
+    solutions           JSONB,
 
     -- Supporting evidence: logs, metric citations, and confidence explanation
     -- Shape: { supporting_logs: [...], evidences: [...], confidence_summary: "..." }
@@ -188,16 +188,17 @@ CREATE TABLE IF NOT EXISTS integrations (
 
 -- =============================================================================
 -- 7. HEALTH CHECKS TABLE (Causa Engine Metrics & Downstream Heartbeats)
--- PK: created_at TIMESTAMP (time-series by design — no surrogate ID)
+-- ID convention: hchk_<16-char-alphanumeric>
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS health_checks (
-    overall_status VARCHAR(32) NOT NULL,   -- UP, DEGRADED, DOWN
-    component_info JSONB       NOT NULL,
+    id             VARCHAR(21)              NOT NULL,
+    overall_status VARCHAR(32)              NOT NULL,   -- UP, DEGRADED, DOWN
+    component_info JSONB                    NOT NULL,
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT pk_health_checks PRIMARY KEY (created_at)
+    CONSTRAINT pk_health_checks PRIMARY KEY (id)
 );
 
 -- Crucial for the 15-day pruning process execution window

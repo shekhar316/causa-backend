@@ -54,10 +54,10 @@ public final class EncryptionUtils {
     /**
      * Returns the 256-bit AES master encryption key.
      *
-     * <p><strong>Current implementation:</strong> derives the key by taking the
-     * first 32 bytes (zero-padded if shorter) of the database password configured
-     * in {@code quarkus.datasource.password} / {@code CAUSA_DB_PASSWORD}.
-     * This is a placeholder — swap the body for a KMS call when ready.
+     * <p>The key material is read from {@code causa.encryption.key}
+     * ({@code CAUSA_ENCRYPTION_KEY} env var), which must be set in production
+     * via a Kubernetes Secret. The {@code application.yml} default is only used
+     * in local development and must never be used in production.
      *
      * <p><strong>TODO:</strong> Replace with a real KMS lookup:
      * <pre>{@code
@@ -68,15 +68,13 @@ public final class EncryptionUtils {
      * @return 256-bit AES {@link SecretKey}
      */
     public static SecretKey getMasterKey() {
-        String dbPassword = ConfigProvider.getConfig()
-                .getOptionalValue("quarkus.datasource.password", String.class)
-                .filter(p -> !p.isBlank())
-                .orElse("causa-default-fallback-key!!");   // safe fallback for dev/test
+        String encryptionKey = ConfigProvider.getConfig()
+                .getValue("causa.encryption.key", String.class);
 
         byte[] rawKey = new byte[KEY_LENGTH];
-        byte[] passwordBytes = dbPassword.getBytes(StandardCharsets.UTF_8);
-        // Copy password bytes into a 32-byte array (truncate or zero-pad as needed)
-        System.arraycopy(passwordBytes, 0, rawKey, 0, Math.min(passwordBytes.length, KEY_LENGTH));
+        byte[] keyBytes = encryptionKey.getBytes(StandardCharsets.UTF_8);
+        // Copy key bytes into a 32-byte array (truncate or zero-pad as needed)
+        System.arraycopy(keyBytes, 0, rawKey, 0, Math.min(keyBytes.length, KEY_LENGTH));
         return new SecretKeySpec(rawKey, "AES");
     }
 

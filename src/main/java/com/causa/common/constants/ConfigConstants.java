@@ -282,6 +282,54 @@ public final class ConfigConstants {
     );
 
     // =========================================================================
+    // Numeric key declarations  (validated on write; parsed on read)
+    // =========================================================================
+
+    /**
+     * Set of configuration keys whose values must be parseable as a non-negative integer.
+     * Enforced at the API layer; callers can safely use {@code Integer.parseInt} on them.
+     */
+    public static final java.util.Set<String> INTEGER_KEYS = java.util.Set.of(
+            LLM.MAX_TOKENS,
+            LLM.TIMEOUT_SECONDS,
+            LLM.CHAT_MEMORY_SIZE,
+            Alert.COOLDOWN_MINUTES,
+            MCP.Kubernetes.TIMEOUT,
+            MCP.Kruize.TIMEOUT,
+            MCP.Cryostat.TIMEOUT,
+            MCP.Cryostat.RETRY_DELAY,
+            MCP.Cryostat.MAX_RETRIES
+    );
+
+    /**
+     * Set of configuration keys whose values must be parseable as a non-negative double.
+     * Enforced at the API layer; callers can safely use {@code Double.parseDouble} on them.
+     */
+    public static final java.util.Set<String> DOUBLE_KEYS = java.util.Set.of(
+            LLM.TEMPERATURE
+    );
+
+    /**
+     * Returns {@code true} when the value stored for this key must be a valid integer.
+     *
+     * @param key the configuration key
+     * @return {@code true} if the value must parse as an integer
+     */
+    public static boolean isIntegerKey(String key) {
+        return key != null && INTEGER_KEYS.contains(key);
+    }
+
+    /**
+     * Returns {@code true} when the value stored for this key must be a valid double.
+     *
+     * @param key the configuration key
+     * @return {@code true} if the value must parse as a double
+     */
+    public static boolean isDoubleKey(String key) {
+        return key != null && DOUBLE_KEYS.contains(key);
+    }
+
+    // =========================================================================
     // Sensitive key declarations
     // =========================================================================
 

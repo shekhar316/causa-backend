@@ -1,68 +1,72 @@
 package com.causa.config;
 
-import io.smallrye.config.ConfigMapping;
-import io.smallrye.config.WithDefault;
-import io.smallrye.config.WithName;
+import com.causa.common.constants.ConfigConstants;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * Alert Configuration
+ * Alert Configuration Snapshot
  *
- * <p>Configuration properties for alert ingestion and processing.
- * <p>Maps to the {@code causa.alerts.*} configuration namespace.
+ * <p>Typed view of all Alert-related keys from the in-memory configuration cache.
+ * Constructed by {@link AppConfig} on every call to {@link AppConfig#getAlertConfig()}
+ * so callers always receive the current values from the DB-backed cache.
+ *
+ * <p>Keys mirror {@link ConfigConstants.Alert}.
  *
  * @since 0.0.1
  */
-@ConfigMapping(prefix = "causa.alerts")
-public interface AlertConfig {
+public final class AlertConfig {
+
+    private final String filterSeverity;
+    private final String cooldownMinutes;
+    private final String ignoreNamespaces;
+    private final String cooldownCleanupInterval;
+
+    AlertConfig(Map<String, String> cache) {
+        this.filterSeverity           = cache.get(ConfigConstants.Alert.FILTER_SEVERITY);
+        this.cooldownMinutes          = cache.get(ConfigConstants.Alert.COOLDOWN_MINUTES);
+        this.ignoreNamespaces         = cache.get(ConfigConstants.Alert.IGNORE_NAMESPACES);
+        this.cooldownCleanupInterval  = cache.get(ConfigConstants.Alert.COOLDOWN_CLEANUP_INTERVAL);
+    }
 
     /**
-     * Minimum severity level for alerts to trigger diagnostic pipeline.
-     *
-     * <p>Possible values: critical, warning, info
-     * <p>Default: critical
-     *
-     * @return the minimum severity filter
+     * Minimum severity to trigger the diagnostic pipeline.
+     * Defaults to {@code "critical"} if not set.
      */
-    @WithName("filter-severity")
-    @WithDefault("critical")
-    String filterSeverity();
+    public String getFilterSeverity() {
+        return filterSeverity != null ? filterSeverity : "critical";
+    }
 
     /**
-     * Cooldown period in minutes before processing repeat alerts for the same pod.
-     *
-     * <p>Default: 15 minutes
-     *
-     * @return the cooldown period in minutes
+     * Cooldown period in minutes before re-processing an alert for the same pod.
+     * Defaults to {@code 15} if not set.
      */
-    @WithName("cooldown-minutes")
-    @WithDefault("15")
-    int cooldownMinutes();
+    public int getCooldownMinutes() {
+        return cooldownMinutes != null ? Integer.parseInt(cooldownMinutes) : 15;
+    }
 
     /**
-     * Cooldown cache cleanup interval.
-     *
-     * <p>Determines how often expired cooldown entries are purged from memory.
-     * <p>Default: 5m (5 minutes)
-     * <p>Valid formats: 5m, 10m, 1h, etc.
-     *
-     * @return cleanup interval as a duration string
+     * Comma-separated list of namespaces to ignore, parsed into a {@link List}.
+     * Defaults to {@code ["kube-system", "istio-system"]} if not set.
      */
-    @WithName("cooldown-cleanup-interval")
-    @WithDefault("5m")
-    String cooldownCleanupInterval();
+    public Optional<List<String>> getIgnoreNamespaces() {
+        if (ignoreNamespaces == null || ignoreNamespaces.isBlank()) {
+            return Optional.of(List.of("kube-system", "istio-system"));
+        }
+        return Optional.of(Arrays.stream(ignoreNamespaces.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList());
+    }
 
     /**
-     * Comma-separated list of namespaces to ignore.
-     *
-     * <p>Alerts from these namespaces will be filtered out.
-     * <p>Default: kube-system,istio-system
-     *
-     * @return optional list of ignored namespaces
+     * Cooldown cache cleanup interval string — e.g. {@code "5m"}.
+     * Defaults to {@code "5m"} if not set.
      */
-    @WithName("ignore-namespaces")
-    @WithDefault("kube-system,istio-system")
-    Optional<List<String>> ignoreNamespaces();
+    public String getCooldownCleanupInterval() {
+        return cooldownCleanupInterval != null ? cooldownCleanupInterval : "5m";
+    }
 }

@@ -83,6 +83,17 @@ public final class ApiConstants {
             public static final String READINESS = "/q/health/ready";
             public static final String HEALTHZ = Version.API_V1 + "/healthz";
         }
+
+        /**
+         * Configuration management API paths and query parameter names.
+         */
+        public static final class Configs {
+            private Configs() {}
+
+            public static final String BASE             = Version.API_V1 + "/configs";
+            public static final String QUERY_CATEGORY   = "category";
+            public static final String QUERY_REFRESH_CACHE = "refresh-cache";
+        }
     }
 
     /**

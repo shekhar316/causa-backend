@@ -5,6 +5,12 @@ import com.causa.common.constants.AlertConstants.AlertStatus;
 import com.causa.common.utils.JsonUtils;
 import com.causa.core.domain.Alert;
 import com.causa.infrastructure.persistence.entity.AlertEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 /**
  * Alert Entity Mapper
@@ -15,6 +21,8 @@ import com.causa.infrastructure.persistence.entity.AlertEntity;
  * @since 0.0.1
  */
 public final class AlertEntityMapper {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private AlertEntityMapper() {
         // Prevent instantiation
@@ -32,19 +40,32 @@ public final class AlertEntityMapper {
         }
 
         AlertEntity entity = new AlertEntity();
-        entity.setAlertId(alert.getAlertId());
-        entity.setTimestamp(alert.getTimestamp());
+        // PK: use the application-generated alertId
+        entity.setId(alert.getAlertId());
+        entity.setSourceAlertId(alert.getAlertId());
         entity.setAlertName(alert.getAlertName());
-        entity.setSeverity(alert.getSeverity().getValue());
-        entity.setPodName(alert.getPodName());
-        entity.setContainerName(alert.getContainerName());
-        entity.setNamespace(alert.getNamespace());
-        entity.setStatus(alert.getStatus().getValue());
-        entity.setHasDiagnostics(alert.hasDiagnostics());
 
-        // Convert Map<String, String> to JsonNode for JSONB storage
-        entity.setLabels(JsonUtils.mapToJsonNode(alert.getLabels()));
-        entity.setAnnotations(JsonUtils.mapToJsonNode(alert.getAnnotations()));
+        // Map Instant → OffsetDateTime for the entity column
+        if (alert.getTimestamp() != null) {
+            entity.setAlertTimestamp(alert.getTimestamp().atOffset(ZoneOffset.UTC));
+        }
+
+        entity.setSeverity(alert.getSeverity() != null ? alert.getSeverity().getValue() : null);
+        entity.setStatus(alert.getStatus() != null ? alert.getStatus().getValue() : null);
+        entity.setContainerName(alert.getContainerName() != null ? alert.getContainerName() : "");
+
+        // Pack pod/namespace/container into containerInfo JSONB
+        ObjectNode containerInfo = objectMapper.createObjectNode();
+        containerInfo.put("pod",       alert.getPodName() != null       ? alert.getPodName()       : "");
+        containerInfo.put("namespace", alert.getNamespace() != null     ? alert.getNamespace()     : "");
+        containerInfo.put("container", alert.getContainerName() != null ? alert.getContainerName() : "");
+        entity.setContainerInfo(containerInfo);
+
+        // Pack labels + annotations into alertMetadata JSONB
+        ObjectNode metadata = objectMapper.createObjectNode();
+        metadata.set("labels",      JsonUtils.mapToJsonNode(alert.getLabels()));
+        metadata.set("annotations", JsonUtils.mapToJsonNode(alert.getAnnotations()));
+        entity.setAlertMetadata(metadata);
 
         return entity;
     }
@@ -60,19 +81,42 @@ public final class AlertEntityMapper {
             return null;
         }
 
+        // Unpack containerInfo JSONB
+        String pod       = null;
+        String namespace = null;
+        String container = entity.getContainerName();
+        if (entity.getContainerInfo() != null) {
+            pod       = entity.getContainerInfo().path("pod").asText(null);
+            namespace = entity.getContainerInfo().path("namespace").asText(null);
+            container = entity.getContainerInfo().path("container").asText(container);
+        }
+
+        // Unpack alertMetadata JSONB
+        java.util.Map<String, String> labels      = null;
+        java.util.Map<String, String> annotations = null;
+        if (entity.getAlertMetadata() != null) {
+            labels      = JsonUtils.jsonNodeToMap(entity.getAlertMetadata().get("labels"));
+            annotations = JsonUtils.jsonNodeToMap(entity.getAlertMetadata().get("annotations"));
+        }
+
+        // Map OffsetDateTime → Instant
+        Instant timestamp = null;
+        if (entity.getAlertTimestamp() != null) {
+            timestamp = entity.getAlertTimestamp().toInstant();
+        }
+
         return Alert.builder()
-            .alertId(entity.getAlertId())
-            .timestamp(entity.getTimestamp())
+            .alertId(entity.getId())
+            .timestamp(timestamp)
             .alertName(entity.getAlertName())
             .severity(AlertSeverity.fromString(entity.getSeverity()))
-            .podName(entity.getPodName())
-            .containerName(entity.getContainerName())
-            .namespace(entity.getNamespace())
+            .podName(pod)
+            .containerName(container)
+            .namespace(namespace)
             .status(AlertStatus.fromString(entity.getStatus()))
-            .hasDiagnostics(entity.getHasDiagnostics())
-            .labels(JsonUtils.jsonNodeToMap(entity.getLabels()))
-            .annotations(JsonUtils.jsonNodeToMap(entity.getAnnotations()))
+            .hasDiagnostics(false)
+            .labels(labels)
+            .annotations(annotations)
             .build();
     }
-
 }

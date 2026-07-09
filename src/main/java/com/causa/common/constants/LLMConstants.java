@@ -49,6 +49,11 @@ public final class LLMConstants {
         public static final String VERTEX_AI_ANTHROPIC = "vertex-ai-anthropic";
         public static final String IBM_BOB = "bob";
         public static final String OLLAMA = "ollama";
+
+        /** Immutable set of every valid provider value — used for API-level validation. */
+        public static final java.util.Set<String> ALL = java.util.Set.of(
+                ANTHROPIC, VERTEX_AI_ANTHROPIC, IBM_BOB, OLLAMA
+        );
     }
 
     /**
@@ -72,6 +77,13 @@ public final class LLMConstants {
         public static final String CLAUDE_3_OPUS = "claude-3-opus-20240229";
         public static final String CLAUDE_3_SONNET = "claude-3-sonnet-20240229";
         public static final String CLAUDE_3_HAIKU = "claude-3-haiku-20240307";
+
+        /** Immutable set of every valid model name — used for API-level validation. */
+        public static final java.util.Set<String> ALL = java.util.Set.of(
+                BOB, GRANITE,
+                CLAUDE_OPUS_4, CLAUDE_SONNET_4_6, CLAUDE_SONNET_4, CLAUDE_HAIKU_4,
+                CLAUDE_3_5_SONNET, CLAUDE_3_OPUS, CLAUDE_3_SONNET, CLAUDE_3_HAIKU
+        );
     }
 
     /**

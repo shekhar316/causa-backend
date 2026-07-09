@@ -1,7 +1,7 @@
 package com.causa.core.services.diagnostic;
 
 import com.causa.common.constants.ModelType;
-import com.causa.config.LLMConfig;
+import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
 import com.causa.core.services.PromptTemplateLoader;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -22,12 +22,12 @@ import jakarta.inject.Inject;
 public class RcaPromptBuilder {
 
     private final PromptTemplateLoader templateLoader;
-    private final LLMConfig llmConfig;
+    private final AppConfig appConfig;
 
     @Inject
-    public RcaPromptBuilder(PromptTemplateLoader templateLoader, LLMConfig llmConfig) {
+    public RcaPromptBuilder(PromptTemplateLoader templateLoader, AppConfig appConfig) {
         this.templateLoader = templateLoader;
-        this.llmConfig = llmConfig;
+        this.appConfig = appConfig;
     }
 
     /**
@@ -43,7 +43,8 @@ public class RcaPromptBuilder {
     public String buildPrompt(Alert alert, String mcpContext) {
         // Determine model type for template selection
         ModelType modelType = determineModelType(
-                llmConfig.provider().orElse(""), llmConfig.modelName().orElse(""));
+                appConfig.getLlmConfig().getProvider().orElse(""),
+                appConfig.getLlmConfig().getModelName().orElse(""));
 
         // Load appropriate template
         PromptTemplateLoader.PromptTemplate template = templateLoader.loadTemplate(modelType.getTemplateName());
@@ -59,7 +60,8 @@ public class RcaPromptBuilder {
      */
     public String getSystemPrompt() {
         ModelType modelType = determineModelType(
-                llmConfig.provider().orElse(""), llmConfig.modelName().orElse(""));
+                appConfig.getLlmConfig().getProvider().orElse(""),
+                appConfig.getLlmConfig().getModelName().orElse(""));
         PromptTemplateLoader.PromptTemplate template = templateLoader.loadTemplate(modelType.getTemplateName());
         return template.systemPrompt();
     }

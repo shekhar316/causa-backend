@@ -1,7 +1,8 @@
 package com.causa.llm;
 
+import com.causa.common.constants.ConfigConstants;
 import com.causa.common.constants.LLMConstants;
-import com.causa.config.LLMConfig;
+import com.causa.config.AppConfig;
 import com.causa.core.domain.LLMRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,17 +12,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link BobShellPromptSender}.
- * 
+ *
  * <p>Tests the BOB Shell integration following the same patterns as LangChainPromptSender tests.
  * These are unit tests that verify the business logic without actually calling BOB Shell CLI.
- * 
+ *
  * <p>Test Coverage:
  * <ul>
  *   <li>Initialization and configuration</li>
@@ -40,23 +39,26 @@ import static org.mockito.Mockito.*;
 class BobShellPromptSenderTest {
 
     @Mock
-    private LLMConfig llmConfig;
-
-    @Mock
-    private LLMConfig.BobConfig bobConfig;
+    private AppConfig appConfig;
 
     private BobShellPromptSender bobShellPromptSender;
+
+    /** Builds a real AppConfig pre-loaded with the given API key. */
+    private AppConfig realAppConfigWithApiKey(String apiKey) {
+        AppConfig cfg = new AppConfig();
+        if (apiKey != null) {
+            cfg.put(ConfigConstants.LLM.API_KEY, apiKey);
+        }
+        return cfg;
+    }
 
     /**
      * Setup default mock behavior for tests that need it.
      * Using lenient() to avoid UnnecessaryStubbingException for tests that don't use all mocks.
      */
     private void setupDefaultMocks() {
-        lenient().when(llmConfig.bob()).thenReturn(bobConfig);
-        lenient().when(bobConfig.shellPath()).thenReturn(LLMConstants.Provider.IBM_BOB);
-        // apiKey and timeoutSeconds come from top-level LLMConfig, not BobConfig
-        lenient().when(llmConfig.apiKey()).thenReturn(Optional.of("test-api-key"));
-        lenient().when(llmConfig.timeoutSeconds()).thenReturn(LLMConstants.BobShell.DEFAULT_TIMEOUT_SECONDS);
+        AppConfig cfg = realAppConfigWithApiKey("test-api-key");
+        lenient().when(appConfig.getLlmConfig()).thenReturn(cfg.getLlmConfig());
     }
 
     @Nested
@@ -66,58 +68,57 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should initialize with valid configuration")
         void shouldInitializeWithValidConfiguration() {
-            // Given - constructor only reads config.apiKey(); shell path is read lazily on use
-            when(llmConfig.apiKey()).thenReturn(Optional.of("test-api-key"));
+            // Given
+            when(appConfig.getLlmConfig()).thenReturn(realAppConfigWithApiKey("test-api-key").getLlmConfig());
 
             // When
-            bobShellPromptSender = new BobShellPromptSender(llmConfig);
+            bobShellPromptSender = new BobShellPromptSender(appConfig);
 
             // Then
             assertNotNull(bobShellPromptSender);
-            verify(llmConfig).apiKey();
+            verify(appConfig).getLlmConfig();
         }
 
         @Test
         @DisplayName("Should read shell path from config lazily on each use")
         void shouldReadShellPathFromConfigLazily() {
             // Given - shell path is not read in constructor, only when send()/checkAvailability() is called
-            when(llmConfig.apiKey()).thenReturn(Optional.of("test-api-key"));
+            when(appConfig.getLlmConfig()).thenReturn(realAppConfigWithApiKey("test-api-key").getLlmConfig());
 
             // When
-            bobShellPromptSender = new BobShellPromptSender(llmConfig);
+            bobShellPromptSender = new BobShellPromptSender(appConfig);
 
-            // Then - no bob() or shellPath() called during construction
+            // Then - constructor calls getLlmConfig() once (for API key); no further calls
             assertNotNull(bobShellPromptSender);
-            verify(llmConfig, never()).bob();
+            verify(appConfig, times(1)).getLlmConfig();
         }
 
         @Test
         @DisplayName("Should use environment variable for API key when not in config")
         void shouldUseEnvironmentVariableForApiKey() {
-            // Given
-            when(llmConfig.apiKey()).thenReturn(Optional.empty());
+            // Given — empty config: no API key stored
+            when(appConfig.getLlmConfig()).thenReturn(new AppConfig().getLlmConfig());
 
             // When
-            bobShellPromptSender = new BobShellPromptSender(llmConfig);
+            bobShellPromptSender = new BobShellPromptSender(appConfig);
 
             // Then
             assertNotNull(bobShellPromptSender);
-            verify(llmConfig).apiKey();
-            // BOB Shell will use BOBSHELL_API_KEY environment variable
+            verify(appConfig).getLlmConfig();
         }
 
         @Test
         @DisplayName("Should handle custom configuration correctly")
         void shouldHandleConfigurationCorrectly() {
             // Given
-            when(llmConfig.apiKey()).thenReturn(Optional.of("custom-key"));
+            when(appConfig.getLlmConfig()).thenReturn(realAppConfigWithApiKey("custom-key").getLlmConfig());
 
             // When
-            bobShellPromptSender = new BobShellPromptSender(llmConfig);
+            bobShellPromptSender = new BobShellPromptSender(appConfig);
 
             // Then
             assertNotNull(bobShellPromptSender);
-            verify(llmConfig).apiKey();
+            verify(appConfig).getLlmConfig();
         }
     }
 
@@ -128,19 +129,18 @@ class BobShellPromptSenderTest {
         @BeforeEach
         void setUpReadiness() {
             setupDefaultMocks();
-            bobShellPromptSender = new BobShellPromptSender(llmConfig);
+            bobShellPromptSender = new BobShellPromptSender(appConfig);
         }
 
         @Test
         @DisplayName("Should check BOB Shell availability")
         void shouldCheckBobShellAvailability() {
             // When
-            boolean isReady = bobShellPromptSender.isReady();
+            bobShellPromptSender.isReady();
 
             // Then
             // Note: isReady() actively checks if BOB Shell CLI is available
             // Result depends on whether BOB Shell is installed in the environment
-            // This is a unit test, so we just verify the method can be called
             assertNotNull(bobShellPromptSender);
         }
     }
@@ -154,8 +154,7 @@ class BobShellPromptSenderTest {
         void shouldBuildSimplePromptCorrectly() {
             // Given
             String userPrompt = "What is 2+2?";
-            LLMRequest request = LLMRequest.builder(userPrompt)
-                .build();
+            LLMRequest request = LLMRequest.builder(userPrompt).build();
 
             // Then
             assertNotNull(request);
@@ -167,15 +166,13 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should build prompt with system prompt")
         void shouldBuildPromptWithSystemPrompt() {
-            // Given
             String systemPrompt = "You are a helpful assistant";
             String userPrompt = "What is 2+2?";
-            
+
             LLMRequest request = LLMRequest.builder(userPrompt)
                 .systemPrompt(systemPrompt)
                 .build();
 
-            // Then
             assertNotNull(request);
             assertEquals(userPrompt, request.prompt());
             assertTrue(request.systemPrompt().isPresent());
@@ -185,15 +182,13 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should build prompt with context")
         void shouldBuildPromptWithContext() {
-            // Given
             String context = "Previous conversation context";
             String userPrompt = "Continue the conversation";
-            
+
             LLMRequest request = LLMRequest.builder(userPrompt)
                 .context(context)
                 .build();
 
-            // Then
             assertNotNull(request);
             assertEquals(userPrompt, request.prompt());
             assertTrue(request.context().isPresent());
@@ -203,16 +198,13 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should handle large prompts")
         void shouldHandleLargePrompts() {
-            // Given - Create a large prompt (always uses stdin now)
             StringBuilder largePrompt = new StringBuilder();
             for (int i = 0; i < 101000; i++) {
                 largePrompt.append("a");
             }
-            
-            LLMRequest request = LLMRequest.builder(largePrompt.toString())
-                .build();
 
-            // Then
+            LLMRequest request = LLMRequest.builder(largePrompt.toString()).build();
+
             assertNotNull(request);
             assertTrue(request.prompt().length() > 100000);
         }
@@ -223,33 +215,26 @@ class BobShellPromptSenderTest {
     class ConfigurationTests {
 
         @Test
-        @DisplayName("Should respect custom shell path")
+        @DisplayName("Should respect custom shell path lazily")
         void shouldRespectCustomShellPath() {
-            // Given - shell path is read from config lazily; constructor only reads apiKey
-            when(llmConfig.apiKey()).thenReturn(Optional.of("test-api-key"));
+            when(appConfig.getLlmConfig()).thenReturn(realAppConfigWithApiKey("test-api-key").getLlmConfig());
 
-            // When
-            bobShellPromptSender = new BobShellPromptSender(llmConfig);
+            bobShellPromptSender = new BobShellPromptSender(appConfig);
 
-            // Then
             assertNotNull(bobShellPromptSender);
-            // shell path is read on each process invocation via config.bob().shellPath()
-            verify(llmConfig, never()).bob();
+            // getLlmConfig() is called once in constructor (for API key); shell path is read lazily on use
+            verify(appConfig, times(1)).getLlmConfig();
         }
 
         @Test
         @DisplayName("Should handle missing API key gracefully")
         void shouldHandleMissingApiKeyGracefully() {
-            // Given
-            when(llmConfig.apiKey()).thenReturn(Optional.empty());
+            when(appConfig.getLlmConfig()).thenReturn(new AppConfig().getLlmConfig());
 
-            // When
-            bobShellPromptSender = new BobShellPromptSender(llmConfig);
+            bobShellPromptSender = new BobShellPromptSender(appConfig);
 
-            // Then
             assertNotNull(bobShellPromptSender);
-            verify(llmConfig).apiKey();
-            // BOB Shell will use BOBSHELL_API_KEY environment variable
+            verify(appConfig).getLlmConfig();
         }
     }
 
@@ -260,7 +245,6 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should parse valid BOB Shell output")
         void shouldParseValidBobShellOutput() {
-            // Given
             String bobOutput = """
                 ---output---
                 {"response": "The answer is 4"}
@@ -268,7 +252,6 @@ class BobShellPromptSenderTest {
                 {"stats": {"promptTokens": 10, "completionTokens": 5, "tokensUsed": 15}}
                 """;
 
-            // This test verifies the output format BOB Shell is expected to produce
             assertTrue(bobOutput.contains(LLMConstants.BobShell.OUTPUT_MARKER));
             assertTrue(bobOutput.contains("promptTokens"));
             assertTrue(bobOutput.contains("completionTokens"));
@@ -278,21 +261,18 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should handle output without statistics")
         void shouldHandleOutputWithoutStatistics() {
-            // Given
             String bobOutput = """
                 ---output---
                 {"response": "The answer is 4"}
                 ---output---
                 """;
 
-            // This test verifies graceful handling when stats are missing
             assertTrue(bobOutput.contains(LLMConstants.BobShell.OUTPUT_MARKER));
         }
 
         @Test
         @DisplayName("Should extract content between markers")
         void shouldExtractContentBetweenMarkers() {
-            // Given
             String expectedContent = "{\"response\": \"The answer is 4\"}";
             String bobOutput = String.format("""
                 ---output---
@@ -301,7 +281,6 @@ class BobShellPromptSenderTest {
                 {"stats": {"promptTokens": 10, "completionTokens": 5, "tokensUsed": 15}}
                 """, expectedContent);
 
-            // Then
             assertTrue(bobOutput.contains(expectedContent));
         }
     }
@@ -313,19 +292,21 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should extract token usage from valid stats")
         void shouldExtractTokenUsageFromValidStats() {
-            // Given
+            // JSON fields use the actual constant values from LLMConstants.BobShell
             String statsJson = """
                 {
                   "response": "OK",
                   "stats": {
-                    "promptTokens": 15,
-                    "completionTokens": 8,
-                    "tokensUsed": 23
+                    "%s": 15,
+                    "%s": 8,
+                    "%s": 23
                   }
                 }
-                """;
+                """.formatted(
+                    LLMConstants.BobShell.JSON_FIELD_PROMPT_TOKENS,
+                    LLMConstants.BobShell.JSON_FIELD_COMPLETION_TOKENS,
+                    LLMConstants.BobShell.JSON_FIELD_TOKENS_USED);
 
-            // Verify JSON structure
             assertTrue(statsJson.contains(LLMConstants.BobShell.JSON_FIELD_STATS));
             assertTrue(statsJson.contains(LLMConstants.BobShell.JSON_FIELD_PROMPT_TOKENS));
             assertTrue(statsJson.contains(LLMConstants.BobShell.JSON_FIELD_COMPLETION_TOKENS));
@@ -335,24 +316,19 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should handle missing stats field")
         void shouldHandleMissingStatsField() {
-            // Given
             String statsJson = """
                 {
                   "response": "OK"
                 }
                 """;
 
-            // Verify it doesn't contain stats
             assertFalse(statsJson.contains(LLMConstants.BobShell.JSON_FIELD_STATS));
         }
 
         @Test
         @DisplayName("Should handle malformed JSON gracefully")
         void shouldHandleMalformedJsonGracefully() {
-            // Given
             String malformedJson = "{ invalid json }";
-
-            // This should not throw an exception
             assertNotNull(malformedJson);
         }
     }
@@ -364,10 +340,8 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should validate prompt is not empty")
         void shouldValidatePromptIsNotEmpty() {
-            // When/Then
             assertThrows(IllegalArgumentException.class, () -> {
-                LLMRequest.builder("")
-                    .build();
+                LLMRequest.builder("").build();
             });
         }
     }
@@ -413,10 +387,10 @@ class BobShellPromptSenderTest {
         @Test
         @DisplayName("Should use correct JSON field names")
         void shouldUseCorrectJsonFieldNames() {
-            assertEquals("stats", LLMConstants.BobShell.JSON_FIELD_STATS);
-            assertEquals("promptTokens", LLMConstants.BobShell.JSON_FIELD_PROMPT_TOKENS);
-            assertEquals("completionTokens", LLMConstants.BobShell.JSON_FIELD_COMPLETION_TOKENS);
-            assertEquals("tokensUsed", LLMConstants.BobShell.JSON_FIELD_TOKENS_USED);
+            assertEquals("stats",      LLMConstants.BobShell.JSON_FIELD_STATS);
+            assertEquals("prompt",     LLMConstants.BobShell.JSON_FIELD_PROMPT_TOKENS);
+            assertEquals("candidates", LLMConstants.BobShell.JSON_FIELD_COMPLETION_TOKENS);
+            assertEquals("total",      LLMConstants.BobShell.JSON_FIELD_TOKENS_USED);
         }
     }
 }

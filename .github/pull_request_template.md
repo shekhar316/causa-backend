@@ -26,5 +26,3 @@
 - [ ] Tests added or updated
 
 ## Additional Comments
-
-<!-- Optional: Add AI-generated summary here -->

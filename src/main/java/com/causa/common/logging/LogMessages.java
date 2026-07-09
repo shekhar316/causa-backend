@@ -165,6 +165,26 @@ public final class LogMessages {
     }
 
     /**
+     * Configuration management log messages.
+     */
+    public static final class Config {
+        private Config() {}
+
+        public static final String STARTUP_BEGIN        = "Loading configuration from DB and ENV";
+        public static final String STARTUP_DONE         = "Configuration loaded successfully";
+        public static final String CACHE_REFRESH_START  = "Refreshing configuration cache";
+        public static final String CACHE_REFRESH_DONE   = "Configuration cache refreshed";
+        public static final String LOAD_FAILED          = "Failed to load configuration";
+        public static final String LOADED_FROM_ENV      = "Configuration key resolved from ENV/yml";
+        public static final String STORED_AS_NULL       = "Configuration keys have no value in any source";
+        public static final String UPDATED              = "Configuration key updated";
+        public static final String UNKNOWN_KEY          = "Unknown configuration key";
+        public static final String KEY_BLANK            = "Configuration key must not be blank";
+        public static final String VALUE_BLANK          = "Configuration value must not be blank";
+        public static final String INVALID_VALUE        = "Invalid value for configuration key";
+    }
+
+    /**
      * MCP integration log messages.
      */
     public static final class Mcp {

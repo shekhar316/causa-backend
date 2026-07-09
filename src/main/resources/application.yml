@@ -89,6 +89,11 @@ quarkus:
 
 # Custom Application Configuration
 causa:
+  # Encryption key for sensitive configuration values stored in the DB.
+  # Set CAUSA_ENCRYPTION_KEY via a Kubernetes Secret in production.
+  encryption:
+    key: ${CAUSA_ENCRYPTION_KEY:causa-dev-encryption-key-change-me}
+
   # LLM Configuration (LangChain4J)
   llm:
     provider: ${LLM_PROVIDER:vertex-ai-anthropic}

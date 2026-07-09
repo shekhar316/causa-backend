@@ -8,7 +8,7 @@ import com.causa.common.constants.DiagnosticConstants.Fields;
 import com.causa.common.constants.McpConstants.LogFields;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
-import com.causa.config.LLMConfig;
+import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
 import com.causa.core.domain.Diagnostic;
 import com.causa.core.domain.LLMRequest;
@@ -48,7 +48,7 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     private final McpContextCollector mcpContextCollector;
     private final RcaPromptBuilder rcaPromptBuilder;
     private final PromptSender promptSender;
-    private final LLMConfig llmConfig;
+    private final AppConfig appConfig;
     private final ObjectMapper objectMapper;
     private final Validator validator;
 
@@ -57,14 +57,14 @@ public class DiagnosticServiceImpl implements DiagnosticService {
                                   McpContextCollector mcpContextCollector,
                                   RcaPromptBuilder rcaPromptBuilder,
                                   PromptSender promptSender,
-                                  LLMConfig llmConfig,
+                                  AppConfig appConfig,
                                   ObjectMapper objectMapper,
                                   Validator validator) {
         this.diagnosticRepository = diagnosticRepository;
         this.mcpContextCollector = mcpContextCollector;
         this.rcaPromptBuilder = rcaPromptBuilder;
         this.promptSender = promptSender;
-        this.llmConfig = llmConfig;
+        this.appConfig = appConfig;
         this.objectMapper = objectMapper;
         this.validator = validator;
     }
@@ -190,8 +190,8 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             // Build LLM request
             LLMRequest llmRequest = LLMRequest.builder(userPrompt)
                 .systemPrompt(systemPrompt)
-                .temperature(llmConfig.temperature())
-                .maxTokens(llmConfig.maxTokens())
+                .temperature(appConfig.getLlmConfig().getTemperature())
+                .maxTokens(appConfig.getLlmConfig().getMaxTokens())
                 .build();
 
             // Call the LLM (works with both LangChain and BobShell)

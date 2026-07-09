@@ -3,7 +3,7 @@ package com.causa.core.services.impl;
 import com.causa.common.constants.AlertConstants.AlertSeverity;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
-import com.causa.config.AlertConfig;
+import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
 import com.causa.core.ports.AlertRepository;
 import com.causa.core.services.AlertService;
@@ -31,7 +31,7 @@ public class AlertServiceImpl implements AlertService {
 
     private static final CausaLogger log = CausaLogger.getLogger(AlertServiceImpl.class);
 
-    private final AlertConfig alertConfig;
+    private final AppConfig appConfig;
     private final AlertRepository alertRepository;
     private final ConcurrentHashMap<String, Instant> cooldownCache = new ConcurrentHashMap<>();
 
@@ -39,21 +39,21 @@ public class AlertServiceImpl implements AlertService {
     private Set<String> ignoredNamespaces;
 
     @Inject
-    public AlertServiceImpl(AlertConfig alertConfig, AlertRepository alertRepository) {
-        this.alertConfig = alertConfig;
+    public AlertServiceImpl(AppConfig appConfig, AlertRepository alertRepository) {
+        this.appConfig = appConfig;
         this.alertRepository = alertRepository;
     }
 
     @PostConstruct
     void init() {
-        this.minimumSeverity = AlertSeverity.fromString(alertConfig.filterSeverity());
-        this.ignoredNamespaces = alertConfig.ignoreNamespaces()
+        this.minimumSeverity = AlertSeverity.fromString(appConfig.getAlertConfig().getFilterSeverity());
+        this.ignoredNamespaces = appConfig.getAlertConfig().getIgnoreNamespaces()
             .map(Set::copyOf)
             .orElse(Set.of());
 
         log.info("Alert service initialized")
             .field("minimumSeverity", minimumSeverity.getValue())
-            .field("cooldownMinutes", alertConfig.cooldownMinutes())
+            .field("cooldownMinutes", appConfig.getAlertConfig().getCooldownMinutes())
             .field("ignoredNamespaces", ignoredNamespaces)
             .log();
     }
@@ -122,7 +122,7 @@ public class AlertServiceImpl implements AlertService {
             return false;
         }
 
-        long cooldownMinutes = alertConfig.cooldownMinutes();
+        long cooldownMinutes = appConfig.getAlertConfig().getCooldownMinutes();
         Instant cooldownExpiry = lastSeen.plusSeconds(cooldownMinutes * 60L);
 
         return Instant.now().isBefore(cooldownExpiry);
@@ -145,7 +145,7 @@ public class AlertServiceImpl implements AlertService {
     @Scheduled(every = "{causa.alerts.cooldown-cleanup-interval}")
     void cleanupCooldownCache() {
         int beforeSize = cooldownCache.size();
-        long cooldownSeconds = alertConfig.cooldownMinutes() * 60L;
+        long cooldownSeconds = appConfig.getAlertConfig().getCooldownMinutes() * 60L;
         Instant cutoff = Instant.now().minusSeconds(cooldownSeconds);
 
         cooldownCache.entrySet().removeIf(entry -> entry.getValue().isBefore(cutoff));

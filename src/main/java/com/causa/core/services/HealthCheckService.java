@@ -9,7 +9,7 @@ import com.causa.common.constants.HealthCheckConstants;
 import com.causa.common.constants.LLMConstants;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
-import com.causa.config.LLMConfig;
+import com.causa.config.AppConfig;
 import com.causa.core.domain.LLMRequest;
 import com.causa.core.domain.LLMResponse;
 import com.causa.core.ports.llm.PromptSender;
@@ -62,7 +62,7 @@ public class HealthCheckService {
     private final String mcpCryostatHealthPath;
     private final int mcpCryostatTimeout;
     private final PromptSender llmPromptSender;
-    private final LLMConfig llmConfig;
+    private final AppConfig appConfig;
 
     @Inject
     public HealthCheckService(
@@ -79,7 +79,7 @@ public class HealthCheckService {
             @ConfigProperty(name = "causa.mcp.cryostat.health-path") String mcpCryostatHealthPath,
             @ConfigProperty(name = "causa.mcp.cryostat.timeout-ms") int mcpCryostatTimeout,
             PromptSender llmPromptSender,
-            LLMConfig llmConfig) {
+            AppConfig appConfig) {
         this.databaseConnectionService = databaseConnectionService;
         this.dataSource = dataSource;
         this.applicationVersion = applicationVersion;
@@ -93,7 +93,7 @@ public class HealthCheckService {
         this.mcpCryostatHealthPath = mcpCryostatHealthPath;
         this.mcpCryostatTimeout = mcpCryostatTimeout;
         this.llmPromptSender = llmPromptSender;
-        this.llmConfig = llmConfig;
+        this.appConfig = appConfig;
     }
 
     /**
@@ -321,7 +321,7 @@ public class HealthCheckService {
 
             long latency = System.currentTimeMillis() - startTime;
             String message = String.format(LLMConstants.Messages.LLM_CONNECTED_FORMAT,
-                    llmConfig.modelName().orElse("unknown"));
+                    appConfig.getLlmConfig().getModelName().orElse("unknown"));
 
             log.info(LogMessages.HealthCheck.LLM_CHECK_PASSED)
                 .field(ApiConstants.LogFields.LATENCY_MS, latency)

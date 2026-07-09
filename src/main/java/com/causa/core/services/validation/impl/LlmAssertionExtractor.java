@@ -61,8 +61,8 @@ public class LlmAssertionExtractor implements AssertionExtractor {
      * Determines the model type for template selection based on LLM configuration.
      */
     private String determineModelType(LLMConfig config) {
-        String provider = config.provider().orElse("");
-        String modelName = config.modelName().orElse("");
+        String provider = config.getProvider().orElse("");
+        String modelName = config.getModelName().orElse("");
 
         // Check for BOB/Granite models
         if (!modelName.isEmpty() && (

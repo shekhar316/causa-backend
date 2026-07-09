@@ -10,6 +10,7 @@ import java.util.UUID;
 import com.causa.common.constants.McpConstants;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
+import com.causa.config.AppConfig;
 import com.causa.config.McpConfig;
 import com.causa.core.domain.Alert;
 import com.causa.core.domain.DiagnosticContext;
@@ -36,13 +37,13 @@ public class McpContextCollector {
 
     private static final CausaLogger log = CausaLogger.getLogger(McpContextCollector.class);
 
-    private final McpConfig mcpConfig;
+    private final AppConfig appConfig;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
     @Inject
-    public McpContextCollector(McpConfig mcpConfig) {
-        this.mcpConfig = mcpConfig;
+    public McpContextCollector(AppConfig appConfig) {
+        this.appConfig = appConfig;
         this.objectMapper = new ObjectMapper();
         this.httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
@@ -165,9 +166,10 @@ public class McpContextCollector {
      */
     private String collectKubernetesPodStatus(Alert alert, DiagnosticContext.Builder contextBuilder) {
         try {
+            McpConfig mcpConfig = appConfig.getMcpConfig();
             String sessionId = initializeMcpSession(
-                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
-                mcpConfig.kubernetes().timeoutMs()
+                mcpConfig.getKubernetes().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                mcpConfig.getKubernetes().getTimeoutMs()
             );
 
             ObjectNode arguments = objectMapper.createObjectNode();
@@ -175,11 +177,11 @@ public class McpContextCollector {
             arguments.put(McpConstants.Arguments.NAMESPACE, alert.getNamespace());
 
             JsonNode result = callMcpTool(
-                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                mcpConfig.getKubernetes().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 sessionId,
                 McpConstants.Tools.PODS_GET,
                 arguments,
-                mcpConfig.kubernetes().timeoutMs()
+                mcpConfig.getKubernetes().getTimeoutMs()
             );
 
             String podStatusYaml = extractTextFromContent(result);
@@ -216,9 +218,10 @@ public class McpContextCollector {
      */
     private String collectKubernetesPodEvents(Alert alert) {
         try {
+            McpConfig mcpConfig = appConfig.getMcpConfig();
             String sessionId = initializeMcpSession(
-                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
-                mcpConfig.kubernetes().timeoutMs()
+                mcpConfig.getKubernetes().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                mcpConfig.getKubernetes().getTimeoutMs()
             );
 
             ObjectNode arguments = objectMapper.createObjectNode();
@@ -226,11 +229,11 @@ public class McpContextCollector {
             arguments.put(McpConstants.Arguments.NAMESPACE, alert.getNamespace());
 
             JsonNode result = callMcpTool(
-                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                mcpConfig.getKubernetes().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 sessionId,
                 McpConstants.Tools.EVENTS_LIST,
                 arguments,
-                mcpConfig.kubernetes().timeoutMs()
+                mcpConfig.getKubernetes().getTimeoutMs()
             );
 
             String eventsText = extractEventsText(result);
@@ -259,9 +262,10 @@ public class McpContextCollector {
      */
     private String collectKubernetesPodLogs(Alert alert) {
         try {
+            McpConfig mcpConfig = appConfig.getMcpConfig();
             String sessionId = initializeMcpSession(
-                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
-                mcpConfig.kubernetes().timeoutMs()
+                mcpConfig.getKubernetes().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                mcpConfig.getKubernetes().getTimeoutMs()
             );
 
             ObjectNode arguments = objectMapper.createObjectNode();
@@ -273,11 +277,11 @@ public class McpContextCollector {
             }
 
             JsonNode result = callMcpTool(
-                mcpConfig.kubernetes().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                mcpConfig.getKubernetes().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
                 sessionId,
                 McpConstants.Tools.PODS_LOG,
                 arguments,
-                mcpConfig.kubernetes().timeoutMs()
+                mcpConfig.getKubernetes().getTimeoutMs()
             );
 
             String logsText = extractLogsText(result);
@@ -808,9 +812,10 @@ public class McpContextCollector {
     private void collectKruizeContext(DiagnosticContext.Builder builder, Alert alert, String containerName) {
         // Cost recommendations
         try {
+            McpConfig mcpConfig = appConfig.getMcpConfig();
             String sessionId = initializeMcpSession(
-                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
-                mcpConfig.kruize().timeoutMs()
+                mcpConfig.getKruize().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
+                mcpConfig.getKruize().getTimeoutMs()
             );
 
             ObjectNode arguments = objectMapper.createObjectNode();
@@ -820,11 +825,11 @@ public class McpContextCollector {
             }
 
             JsonNode result = callMcpTool(
-                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
+                mcpConfig.getKruize().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
                 sessionId,
                 McpConstants.Tools.KRUIZE_GET_COST_RECOMMENDATIONS,
                 arguments,
-                mcpConfig.kruize().timeoutMs()
+                mcpConfig.getKruize().getTimeoutMs()
             );
 
             String costText = extractTextFromContent(result);
@@ -844,9 +849,10 @@ public class McpContextCollector {
 
         // Performance recommendations
         try {
+            McpConfig mcpConfig = appConfig.getMcpConfig();
             String sessionId = initializeMcpSession(
-                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
-                mcpConfig.kruize().timeoutMs()
+                mcpConfig.getKruize().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
+                mcpConfig.getKruize().getTimeoutMs()
             );
 
             ObjectNode arguments = objectMapper.createObjectNode();
@@ -856,11 +862,11 @@ public class McpContextCollector {
             }
 
             JsonNode result = callMcpTool(
-                mcpConfig.kruize().endpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
+                mcpConfig.getKruize().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT_SLASH,
                 sessionId,
                 McpConstants.Tools.KRUIZE_GET_PERF_RECOMMENDATIONS,
                 arguments,
-                mcpConfig.kruize().timeoutMs()
+                mcpConfig.getKruize().getTimeoutMs()
             );
 
             String perfText = extractTextFromContent(result);
@@ -963,25 +969,26 @@ public class McpContextCollector {
      * @return the tool response text, or null on failure
      */
     private String callCryostatToolWithRetry(String toolName, String podName, String alertId) {
-        int maxRetries = mcpConfig.cryostat().maxRetries();
-        long retryDelay = mcpConfig.cryostat().retryDelayMs();
+        McpConfig mcpConfig = appConfig.getMcpConfig();
+        int maxRetries = mcpConfig.getCryostat().getMaxRetries();
+        long retryDelay = mcpConfig.getCryostat().getRetryDelayMs();
 
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 String sessionId = initializeMcpSession(
-                    mcpConfig.cryostat().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
-                    mcpConfig.cryostat().timeoutMs()
+                    mcpConfig.getCryostat().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                    mcpConfig.getCryostat().getTimeoutMs()
                 );
 
                 ObjectNode arguments = objectMapper.createObjectNode();
                 arguments.put(McpConstants.Arguments.POD_NAME, podName);
 
                 JsonNode result = callMcpTool(
-                    mcpConfig.cryostat().endpoint() + McpConstants.Paths.MCP_ENDPOINT,
+                    mcpConfig.getCryostat().getEndpoint() + McpConstants.Paths.MCP_ENDPOINT,
                     sessionId,
                     toolName,
                     arguments,
-                    mcpConfig.cryostat().timeoutMs()
+                    mcpConfig.getCryostat().getTimeoutMs()
                 );
 
                 String text = extractTextFromContent(result);

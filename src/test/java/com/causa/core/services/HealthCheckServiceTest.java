@@ -3,8 +3,9 @@ package com.causa.core.services;
 import com.causa.api.dto.ComponentHealthDto;
 import com.causa.api.dto.HealthCheckResponseDto;
 import com.causa.common.constants.AppConstants;
+import com.causa.common.constants.ConfigConstants;
 import com.causa.common.constants.HealthCheckConstants;
-import com.causa.config.LLMConfig;
+import com.causa.config.AppConfig;
 import com.causa.core.domain.LLMRequest;
 import com.causa.core.domain.LLMResponse;
 import com.causa.infrastructure.persistence.DatabaseConnectionService;
@@ -20,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.Statement;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -63,7 +63,7 @@ class HealthCheckServiceTest {
     private LangChainPromptSender llmPromptSender;
 
     @Mock
-    private LLMConfig llmConfig;
+    private AppConfig appConfig;
 
     private HealthCheckService healthCheckService;
 
@@ -82,8 +82,18 @@ class HealthCheckServiceTest {
     private static final String MCP_HEALTH_PATH = "/health";
     private static final int MCP_TIMEOUT = 1; // 1 ms — fail immediately, don't slow down tests
 
+    /** Builds a real AppConfig pre-loaded with the given model name for LLM health-check tests. */
+    private AppConfig realAppConfigWithModel(String modelName) {
+        AppConfig cfg = new AppConfig();
+        if (modelName != null) {
+            cfg.put(ConfigConstants.LLM.MODEL_NAME, modelName);
+        }
+        return cfg;
+    }
+
     @BeforeEach
     void setUp() {
+        lenient().when(appConfig.getLlmConfig()).thenReturn(new AppConfig().getLlmConfig());
         healthCheckService = new HealthCheckService(
                 databaseConnectionService,
                 dataSource,
@@ -98,7 +108,7 @@ class HealthCheckServiceTest {
                 MCP_CRYOSTAT_HEALTH_PATH,
                 MCP_CRYOSTAT_TIMEOUT,
                 llmPromptSender,
-                llmConfig
+                appConfig
         );
     }
 
@@ -207,10 +217,10 @@ class HealthCheckServiceTest {
         @DisplayName("Should return UP when LLM is ready and responds")
         void shouldReturnUpWhenLlmIsHealthy() {
             // Given
+            when(appConfig.getLlmConfig()).thenReturn(realAppConfigWithModel("claude-sonnet-4-6").getLlmConfig());
             when(databaseConnectionService.isReady()).thenReturn(false);
             when(llmPromptSender.isReady()).thenReturn(true);
-            when(llmConfig.modelName()).thenReturn(Optional.of("claude-sonnet-4-6"));
-            
+
             LLMResponse mockResponse = new LLMResponse(
                     "OK",
                     "claude-sonnet-4-6",
@@ -241,10 +251,10 @@ class HealthCheckServiceTest {
         @Test
         @DisplayName("Should return UP with 'unknown' fallback when modelName is absent")
         void shouldReturnUpWithUnknownFallbackWhenModelNameAbsent() {
-            // Given
+            // Given — empty AppConfig produces an LLMConfig with no model name set
+            when(appConfig.getLlmConfig()).thenReturn(new AppConfig().getLlmConfig());
             when(databaseConnectionService.isReady()).thenReturn(false);
             when(llmPromptSender.isReady()).thenReturn(true);
-            when(llmConfig.modelName()).thenReturn(Optional.empty());
 
             LLMResponse mockResponse = new LLMResponse(
                     "OK",
@@ -373,8 +383,8 @@ class HealthCheckServiceTest {
             when(statement.execute("SELECT 1")).thenReturn(true);
 
             // Given - LLM UP
+            when(appConfig.getLlmConfig()).thenReturn(realAppConfigWithModel("claude-sonnet-4-6").getLlmConfig());
             when(llmPromptSender.isReady()).thenReturn(true);
-            when(llmConfig.modelName()).thenReturn(Optional.of("claude-sonnet-4-6"));
             LLMResponse mockResponse = new LLMResponse("OK", "claude-sonnet-4-6", 11L, 4L, 0L, 0L, 100L);
             when(llmPromptSender.send(any(LLMRequest.class))).thenReturn(mockResponse);
 
@@ -394,8 +404,8 @@ class HealthCheckServiceTest {
             when(databaseConnectionService.isReady()).thenReturn(false);
 
             // Given - LLM UP
+            when(appConfig.getLlmConfig()).thenReturn(realAppConfigWithModel("claude-sonnet-4-6").getLlmConfig());
             when(llmPromptSender.isReady()).thenReturn(true);
-            when(llmConfig.modelName()).thenReturn(Optional.of("claude-sonnet-4-6"));
             LLMResponse mockResponse = new LLMResponse("OK", "claude-sonnet-4-6", 11L, 4L, 0L, 0L, 100L);
             when(llmPromptSender.send(any(LLMRequest.class))).thenReturn(mockResponse);
 

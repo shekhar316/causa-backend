@@ -64,22 +64,36 @@ quarkus:
       background-validation-interval: ${CAUSA_DB_POOL_VALIDATION_INTERVAL:PT2M}
       new-connection-sql: SELECT 1
 
+  # Flyway Configuration
+  flyway:
+    migrate-at-start: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    out-of-order: false
+
   # Hibernate ORM Configuration
   hibernate-orm:
-    # Use 'update' to automatically create/update schema in development
-    # For production, use 'validate' with proper Flyway migrations
+    # Schema managed exclusively by Flyway — Hibernate must not touch DDL
     database:
-      generation: update
+      generation: none
     log:
-      sql: true
+      sql: false
     # Fix for Jackson date serialization compatibility
     mapping:
       format:
         global: ignore
+    physical-naming-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+
 
 
 # Custom Application Configuration
 causa:
+  # Encryption key for sensitive configuration values stored in the DB.
+  # Set CAUSA_ENCRYPTION_KEY via a Kubernetes Secret in production.
+  encryption:
+    key: ${CAUSA_ENCRYPTION_KEY:causa-dev-encryption-key-change-me}
+
   # LLM Configuration (LangChain4J)
   llm:
     provider: ${LLM_PROVIDER:vertex-ai-anthropic}

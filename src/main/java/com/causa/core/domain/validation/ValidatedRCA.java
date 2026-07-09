@@ -11,8 +11,13 @@ import java.util.stream.Collectors;
 /**
  * Root Cause Analysis with validation results.
  *
- * <p>Wraps the original RCA output with assertion-level validation results,
- * overall confidence scores, and quality metrics.
+ * <p>Wraps the original RCA output with:
+ * <ul>
+ *   <li>Assertion-level validation results (PATH A)</li>
+ *   <li>Rule-based hypothesis validation (PATH B)</li>
+ *   <li>Dual validation aggregation (FINAL VERDICT)</li>
+ *   <li>Overall confidence scores and quality metrics</li>
+ * </ul>
  *
  * @since 0.0.1
  */
@@ -20,6 +25,7 @@ public record ValidatedRCA(
     RootCauseAnalysis originalRca,
     List<ValidationResult> validationResults,
     ValidationSummary summary,
+    DualValidationResult dualValidation,
     Instant validatedAt
 ) {
 
@@ -27,8 +33,9 @@ public record ValidatedRCA(
      * Creates a validated RCA instance.
      *
      * @param originalRca the original RCA from the LLM
-     * @param validationResults validation results for each assertion
+     * @param validationResults validation results for each assertion (PATH A)
      * @param summary validation summary metrics
+     * @param dualValidation dual validation result (PATH A + PATH B aggregated)
      * @param validatedAt timestamp when validation was performed
      */
     public ValidatedRCA {
@@ -43,23 +50,34 @@ public record ValidatedRCA(
         if (summary == null) {
             throw new IllegalArgumentException("Validation summary cannot be null");
         }
+        // dualValidation can be null for backward compatibility
         if (validatedAt == null) {
             validatedAt = Instant.now();
         }
     }
 
     /**
-     * Returns true if the RCA passed validation (>= threshold assertions validated).
+     * Returns true if the RCA passed validation.
+     *
+     * <p>Uses dual validation final verdict if available, otherwise falls back to assertion-based score.
      */
     public boolean isValid() {
-        return summary.validationScore() >= 0.7; // 70% threshold
+        if (dualValidation != null) {
+            return dualValidation.finalVerdict().status() == ValidationResult.ValidationStatus.SUPPORTED;
+        }
+        return summary.validationScore() >= 0.7; // 70% threshold (backward compatibility)
     }
 
     /**
      * Returns true if high confidence validation.
+     *
+     * <p>Uses dual validation final confidence if available, otherwise falls back to assertion average.
      */
     public boolean isHighConfidence() {
-        return summary.averageConfidence() >= 0.8;
+        if (dualValidation != null) {
+            return dualValidation.finalVerdict().confidence() >= 0.8;
+        }
+        return summary.averageConfidence() >= 0.8; // Backward compatibility
     }
 
     /**
@@ -174,6 +192,7 @@ public record ValidatedRCA(
     public static class Builder {
         private RootCauseAnalysis originalRca;
         private List<ValidationResult> validationResults = new ArrayList<>();
+        private DualValidationResult dualValidation;
         private Instant validatedAt = Instant.now();
 
         public Builder originalRca(RootCauseAnalysis rca) {
@@ -191,6 +210,11 @@ public record ValidatedRCA(
             return this;
         }
 
+        public Builder dualValidation(DualValidationResult dualValidation) {
+            this.dualValidation = dualValidation;
+            return this;
+        }
+
         public Builder validatedAt(Instant timestamp) {
             this.validatedAt = timestamp;
             return this;
@@ -202,6 +226,7 @@ public record ValidatedRCA(
                 originalRca,
                 validationResults,
                 summary,
+                dualValidation,
                 validatedAt
             );
         }

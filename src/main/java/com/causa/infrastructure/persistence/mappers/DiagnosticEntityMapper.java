@@ -51,7 +51,7 @@ public final class DiagnosticEntityMapper {
             entity.setFaultDomain(diagnostic.getFaultDomain().getValue());
         }
 
-        // Convert String JSON to JsonNode
+        // Convert String JSON to JsonNode for RCA
         if (diagnostic.getRootCauseAnalysis() != null) {
             try {
                 JsonNode jsonNode = objectMapper.readTree(diagnostic.getRootCauseAnalysis());
@@ -59,6 +59,19 @@ public final class DiagnosticEntityMapper {
             } catch (Exception e) {
                 // If parsing fails, store null (invalid JSON)
                 entity.setRootCauseAnalysis(null);
+            }
+        }
+
+        // Set validation fields
+        entity.setValidationResult(diagnostic.getValidationResult());
+
+        // Convert validation data String to JsonNode
+        if (diagnostic.getValidationData() != null) {
+            try {
+                JsonNode jsonNode = objectMapper.readTree(diagnostic.getValidationData());
+                entity.setValidationData(jsonNode);
+            } catch (Exception e) {
+                entity.setValidationData(null);
             }
         }
 
@@ -87,7 +100,7 @@ public final class DiagnosticEntityMapper {
             builder.faultDomain(FaultDomain.fromString(entity.getFaultDomain()));
         }
 
-        // Convert JsonNode to String JSON
+        // Convert JsonNode to String JSON for RCA
         if (entity.getRootCauseAnalysis() != null) {
             try {
                 String jsonString = objectMapper.writeValueAsString(entity.getRootCauseAnalysis());
@@ -95,6 +108,19 @@ public final class DiagnosticEntityMapper {
             } catch (Exception e) {
                 // If serialization fails, store null
                 builder.rootCauseAnalysis(null);
+            }
+        }
+
+        // Set validation result
+        builder.validationResult(entity.getValidationResult());
+
+        // Convert validation data JsonNode to String
+        if (entity.getValidationData() != null) {
+            try {
+                String jsonString = objectMapper.writeValueAsString(entity.getValidationData());
+                builder.validationData(jsonString);
+            } catch (Exception e) {
+                builder.validationData(null);
             }
         }
 

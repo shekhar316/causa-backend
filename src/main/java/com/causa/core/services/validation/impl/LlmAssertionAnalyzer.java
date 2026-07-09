@@ -1,5 +1,7 @@
 package com.causa.core.services.validation.impl;
 
+import com.causa.common.constants.LLMConstants;
+import com.causa.common.constants.PromptConstants;
 import com.causa.common.logging.CausaLogger;
 import com.causa.config.LLMConfig;
 import com.causa.core.domain.LLMRequest;
@@ -8,6 +10,7 @@ import com.causa.core.domain.validation.Assertion;
 import com.causa.core.domain.validation.Evidence;
 import com.causa.core.domain.validation.ValidationResult;
 import com.causa.core.ports.llm.PromptSender;
+import com.causa.core.services.PromptTemplateLoader;
 import com.causa.core.services.validation.AssertionAnalyzer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -39,63 +42,11 @@ public class LlmAssertionAnalyzer implements AssertionAnalyzer {
 
     private static final CausaLogger log = CausaLogger.getLogger(LlmAssertionAnalyzer.class);
 
-    /**
-     * System prompt for assertion analysis.
-     *
-     * <p>Instructs the LLM to act as an expert validator that verifies claims
-     * against diagnostic evidence.
-     */
-    private static final String ANALYSIS_SYSTEM_PROMPT = """
-        You are an expert validator for Kubernetes root cause analysis.
-
-        Your task: Verify an assertion against diagnostic context.
-
-        Process:
-        1. Understand the assertion - what claim is being made?
-        2. Ask targeted questions to verify the claim:
-           - For OBSERVATION: "Does the context show this fact?"
-           - For TREND: "Does the context show this pattern over time?"
-           - For CAUSALITY: "Does the context support this cause-effect relationship?"
-           - For CONFIGURATION: "Does the context confirm this setting?"
-        3. Search the diagnostic context for evidence
-        4. Evaluate evidence strength and relevance
-        5. Determine validation status and confidence
-
-        Evidence Quality:
-        - DIRECT: Explicit statement in context (e.g., "Reason: OOMKilled")
-        - STRONG: Multiple corroborating data points
-        - MODERATE: Indirect evidence or single data point
-        - WEAK: Circumstantial or partial evidence
-        - NONE: No supporting evidence found
-
-        Validation Status:
-        - SUPPORTED: Strong direct evidence supports the claim
-        - PARTIALLY_SUPPORTED: Some evidence but not conclusive
-        - UNSUPPORTED: Evidence contradicts the claim
-        - UNKNOWN: Insufficient evidence to validate
-
-        Return JSON:
-        {
-          "status": "SUPPORTED|PARTIALLY_SUPPORTED|UNSUPPORTED|UNKNOWN",
-          "confidence": 0.0-1.0,
-          "evidence": [
-            {
-              "snippet": "exact text from context",
-              "source": "section name",
-              "relevance": 0.0-1.0,
-              "type": "KUBERNETES_EVENT|METRIC|POD_LOG|etc"
-            }
-          ],
-          "reasoning": "Explain why this status and confidence",
-          "questions_asked": [
-            "What questions did you ask to verify?"
-          ]
-        }
-        """;
-
     private final PromptSender promptSender;
     private final LLMConfig llmConfig;
     private final ObjectMapper objectMapper;
+    private final PromptTemplateLoader promptTemplateLoader;
+    private final String modelType;
 
     @Inject
     public LlmAssertionAnalyzer(
@@ -106,6 +57,36 @@ public class LlmAssertionAnalyzer implements AssertionAnalyzer {
         this.promptSender = promptSender;
         this.llmConfig = llmConfig;
         this.objectMapper = objectMapper;
+        this.promptTemplateLoader = new PromptTemplateLoader(PromptConstants.TEMPLATE_PATH_ASSERTION_ANALYSIS);
+        this.modelType = determineModelType(llmConfig);
+    }
+
+    /**
+     * Determines the model type for template selection based on LLM configuration.
+     */
+    private String determineModelType(LLMConfig config) {
+        String provider = config.provider().orElse("");
+        String modelName = config.modelName().orElse("");
+
+        // Check for BOB/Granite models
+        if (!modelName.isEmpty() && (
+            modelName.toLowerCase().contains(LLMConstants.ModelNames.BOB) ||
+            modelName.toLowerCase().contains(LLMConstants.ModelNames.GRANITE))) {
+            return LLMConstants.Provider.IBM_BOB;
+        }
+
+        // Check for Ollama provider
+        if (LLMConstants.Provider.OLLAMA.equalsIgnoreCase(provider)) {
+            return LLMConstants.Provider.OLLAMA;
+        }
+
+        // Check for direct Anthropic
+        if (LLMConstants.Provider.ANTHROPIC.equalsIgnoreCase(provider)) {
+            return LLMConstants.Provider.ANTHROPIC;
+        }
+
+        // Default to Vertex AI Anthropic
+        return LLMConstants.Provider.VERTEX_AI_ANTHROPIC;
     }
 
     @Override
@@ -125,12 +106,15 @@ public class LlmAssertionAnalyzer implements AssertionAnalyzer {
         }
 
         try {
-            // Build analysis prompt
-            String userPrompt = buildAnalysisPrompt(assertion, diagnosticContext);
+            // Load template for the current model type
+            PromptTemplateLoader.PromptTemplate template = promptTemplateLoader.loadTemplate(modelType);
+
+            // Build analysis prompt using template
+            String userPrompt = buildAnalysisPrompt(assertion, diagnosticContext, template);
 
             // Call LLM
             LLMRequest request = LLMRequest.builder(userPrompt)
-                .systemPrompt(ANALYSIS_SYSTEM_PROMPT)
+                .systemPrompt(template.systemPrompt())
                 .temperature(0.2) // Low temperature for consistent analysis
                 .maxTokens(3000)  // Allow detailed analysis
                 .build();
@@ -192,94 +176,23 @@ public class LlmAssertionAnalyzer implements AssertionAnalyzer {
     }
 
     /**
-     * Builds the analysis prompt for the LLM.
+     * Builds the analysis prompt for the LLM using template placeholders.
      */
-    private String buildAnalysisPrompt(Assertion assertion, String diagnosticContext) {
-        StringBuilder prompt = new StringBuilder();
+    private String buildAnalysisPrompt(
+        Assertion assertion,
+        String diagnosticContext,
+        PromptTemplateLoader.PromptTemplate template
+    ) {
+        // Get verification guidance from template for this assertion type
+        String verificationGuidance = template.getVerificationGuidance(assertion.type().name());
 
-        prompt.append("# ASSERTION TO VERIFY\n\n");
-        prompt.append("**Text:** ").append(assertion.text()).append("\n");
-        prompt.append("**Type:** ").append(assertion.type()).append("\n");
-        prompt.append("**Source:** ").append(assertion.source()).append("\n");
-
-        // Add type-specific guidance
-        prompt.append("\n# VERIFICATION APPROACH\n\n");
-        prompt.append(getVerificationGuidance(assertion.type()));
-
-        prompt.append("\n# DIAGNOSTIC CONTEXT\n\n");
-        prompt.append("Search the following diagnostic context for evidence:\n\n");
-        prompt.append("```\n");
-        prompt.append(diagnosticContext);
-        prompt.append("\n```\n");
-
-        prompt.append("\n# YOUR TASK\n\n");
-        prompt.append("1. Ask targeted questions about this ").append(assertion.type()).append(" assertion\n");
-        prompt.append("2. Search the context for evidence\n");
-        prompt.append("3. Evaluate evidence quality and relevance\n");
-        prompt.append("4. Return JSON with status, confidence, evidence, and reasoning\n");
-
-        return prompt.toString();
-    }
-
-    /**
-     * Gets verification guidance based on assertion type.
-     */
-    private String getVerificationGuidance(Assertion.AssertionType type) {
-        return switch (type) {
-            case OBSERVATION -> """
-                For OBSERVATION assertions, verify:
-                - Is this fact directly stated in the context?
-                - Are there specific events, logs, or metrics confirming this?
-                - Look for: pod status, events, exit codes, error messages
-
-                Example questions:
-                - "Does the context show the container was OOMKilled?"
-                - "Is there an event with Reason: OOMKilled?"
-                - "What is the exit code?"
-                """;
-
-            case TREND -> """
-                For TREND assertions, verify:
-                - Are there multiple data points showing this pattern?
-                - Does the data show increase/decrease over time?
-                - Look for: time-series metrics, sequential values
-
-                Example questions:
-                - "Does memory usage show an increasing trend?"
-                - "Are there metrics at different timestamps?"
-                - "What are the values at T1, T2, T3?"
-                """;
-
-            case CAUSALITY -> """
-                For CAUSALITY assertions, verify:
-                - Is there evidence for the cause?
-                - Is there evidence for the effect?
-                - Is the causal link supported?
-                - Look for: temporal ordering, mechanism explanation
-
-                Example questions:
-                - "Did the cause occur before the effect?"
-                - "Does the context explain the mechanism?"
-                - "Are there other possible causes?"
-                """;
-
-            case CONFIGURATION -> """
-                For CONFIGURATION assertions, verify:
-                - Is this setting explicitly stated?
-                - Are the values/limits mentioned?
-                - Look for: resource limits, requests, quotas
-
-                Example questions:
-                - "What is the memory limit?"
-                - "What are the resource requests?"
-                - "Are there any quotas configured?"
-                """;
-
-            case RECOMMENDATION -> """
-                Recommendations are not validated against context.
-                They are suggestions based on the RCA, not facts to verify.
-                """;
-        };
+        // Replace placeholders in the template
+        return template.userPrompt()
+            .replace(PromptConstants.PLACEHOLDER_ASSERTION_TEXT, assertion.text())
+            .replace(PromptConstants.PLACEHOLDER_ASSERTION_TYPE, assertion.type().name())
+            .replace(PromptConstants.PLACEHOLDER_ASSERTION_SOURCE, assertion.source().name())
+            .replace(PromptConstants.PLACEHOLDER_VERIFICATION_GUIDANCE, verificationGuidance)
+            .replace(PromptConstants.PLACEHOLDER_DIAGNOSTIC_CONTEXT, diagnosticContext);
     }
 
     /**

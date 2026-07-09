@@ -31,6 +31,8 @@ public class DiagnosticEntity extends BaseEntity {
         public static final String CONFIDENCE_SCORE = "confidence_score";
         public static final String FAULT_DOMAIN = "fault_domain";
         public static final String ROOT_CAUSE_ANALYSIS = "root_cause_analysis";
+        public static final String VALIDATION_RESULT = "validation_result";
+        public static final String VALIDATION_DATA = "validation_data";
     }
 
     // Field name constants for Panache queries
@@ -68,6 +70,13 @@ public class DiagnosticEntity extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = Columns.ROOT_CAUSE_ANALYSIS, columnDefinition = "jsonb")
     private JsonNode rootCauseAnalysis;
+
+    @Column(name = Columns.VALIDATION_RESULT, length = 64)
+    private String validationResult;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = Columns.VALIDATION_DATA, columnDefinition = "jsonb")
+    private JsonNode validationData;
 
     // Getters and Setters
 
@@ -134,5 +143,21 @@ public class DiagnosticEntity extends BaseEntity {
 
     public void setRootCauseAnalysis(JsonNode rootCauseAnalysis) {
         this.rootCauseAnalysis = rootCauseAnalysis;
+    }
+
+    public String getValidationResult() {
+        return validationResult;
+    }
+
+    public void setValidationResult(String validationResult) {
+        this.validationResult = validationResult;
+    }
+
+    public JsonNode getValidationData() {
+        return validationData;
+    }
+
+    public void setValidationData(JsonNode validationData) {
+        this.validationData = validationData;
     }
 }

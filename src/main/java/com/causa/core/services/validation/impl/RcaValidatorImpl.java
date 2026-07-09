@@ -3,22 +3,35 @@ package com.causa.core.services.validation.impl;
 import com.causa.common.logging.CausaLogger;
 import com.causa.core.domain.RootCauseAnalysis;
 import com.causa.core.domain.validation.*;
-import com.causa.core.services.validation.AssertionExtractor;
-import com.causa.core.services.validation.EvidenceMatcher;
-import com.causa.core.services.validation.RcaValidator;
+import com.causa.core.services.rules.HypothesisValidationResult;
+import com.causa.core.services.validation.*;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * Implementation of RCA validation using assertion-driven approach.
+ * Implementation of RCA validation using DUAL validation paths.
  *
- * <p>Validates each assertion independently and aggregates results
- * into a comprehensive validation summary.
+ * <p><strong>PATH A (Assertion-based):</strong>
+ * <ol>
+ *   <li>Extract assertions from RCA</li>
+ *   <li>Validate each assertion using LLM</li>
+ *   <li>Aggregate assertion results</li>
+ * </ol>
+ *
+ * <p><strong>PATH B (Rule-based):</strong>
+ * <ol>
+ *   <li>Extract signals from diagnostic context</li>
+ *   <li>Validate hypothesis using deterministic rules</li>
+ * </ol>
+ *
+ * <p><strong>FINAL:</strong> Aggregate both paths into final verdict.
  *
  * @since 0.0.1
  */
@@ -27,24 +40,34 @@ public class RcaValidatorImpl implements RcaValidator {
 
     private static final CausaLogger log = CausaLogger.getLogger(RcaValidatorImpl.class);
 
-    // Default confidence thresholds
+    // Default configuration
     private static final double DEFAULT_MIN_CONFIDENCE = 0.5;
     private static final double STRONG_SUPPORT_THRESHOLD = 0.8;
     private static final double WEAK_SUPPORT_THRESHOLD = 0.4;
+    private static final DualValidationResult.FinalVerdict.AggregationStrategy DEFAULT_STRATEGY =
+        DualValidationResult.FinalVerdict.AggregationStrategy.WEIGHTED_AVERAGE;
 
     private final AssertionExtractor assertionExtractor;
     private final EvidenceMatcher evidenceMatcher;
-    private final Optional<com.causa.core.services.validation.AssertionAnalyzer> assertionAnalyzer;
+    private final Optional<AssertionAnalyzer> assertionAnalyzer;
+    private final Optional<HypothesisValidator> hypothesisValidator;
+    private final ValidationAggregator validationAggregator;
 
     @Inject
     public RcaValidatorImpl(
         AssertionExtractor assertionExtractor,
         EvidenceMatcher evidenceMatcher,
-        Optional<com.causa.core.services.validation.AssertionAnalyzer> assertionAnalyzer
+        Instance<AssertionAnalyzer> assertionAnalyzerInstance,
+        Instance<HypothesisValidator> hypothesisValidatorInstance,
+        ValidationAggregator validationAggregator
     ) {
         this.assertionExtractor = assertionExtractor;
         this.evidenceMatcher = evidenceMatcher;
-        this.assertionAnalyzer = assertionAnalyzer;
+        this.assertionAnalyzer = assertionAnalyzerInstance.isResolvable() ?
+            Optional.of(assertionAnalyzerInstance.get()) : Optional.empty();
+        this.hypothesisValidator = hypothesisValidatorInstance.isResolvable() ?
+            Optional.of(hypothesisValidatorInstance.get()) : Optional.empty();
+        this.validationAggregator = validationAggregator;
     }
 
     @Override
@@ -58,35 +81,86 @@ public class RcaValidatorImpl implements RcaValidator {
         String diagnosticContext,
         double minimumConfidence
     ) {
-        log.info("Starting RCA validation")
+        String separator = "=".repeat(80);
+
+        log.info("\n" + separator + "\n" +
+                 "🔍 DUAL VALIDATION PIPELINE STARTED\n" +
+                 separator)
             .field("issueTitle", rca.issueTitle())
             .field("anomalyType", rca.anomalyType())
             .field("minimumConfidence", minimumConfidence)
             .log();
 
+        // Log full RCA input
+        log.info("\n" + separator + "\n" +
+                 "📊 RCA INPUT TO VALIDATION:\n" +
+                 separator + "\n" +
+                 "Issue Title: " + rca.issueTitle() + "\n" +
+                 "Anomaly Type: " + rca.anomalyType() + "\n" +
+                 "Root Cause: " + rca.rootCause() + "\n" +
+                 "LLM Confidence (RCA): " + rca.llmConfidenceScoreForRca() + "\n" +
+                 "LLM Confidence (Solution): " + rca.llmConfidenceScoreForSolution() + "\n" +
+                 "Possible Solutions: " + rca.possibleSolutions().size() + "\n" +
+                 separator)
+            .log();
+
+        // Log diagnostic context length
+        log.info("📋 Diagnostic Context (MCP raw data): " + diagnosticContext.length() + " chars")
+            .log();
+
+        // Log the full MCP diagnostic context for debugging
+        String ctxSeparator = "=".repeat(80);
+        log.info("\n" + ctxSeparator + "\n" +
+                 "📋 FULL MCP DIAGNOSTIC CONTEXT (for assertion validation)\n" +
+                 ctxSeparator + "\n" +
+                 diagnosticContext + "\n" +
+                 ctxSeparator)
+            .log();
+
         Instant startTime = Instant.now();
+
+        // ===== PATH A: Assertion-Based Validation =====
+        log.info("PATH A: Starting assertion-based validation")
+            .log();
 
         // Step 1: Extract assertions from RCA
         List<Assertion> assertions = assertionExtractor.extractAssertions(rca);
 
-        log.info("Assertions extracted")
-            .field("totalAssertions", assertions.size())
+        log.info("✅ Assertions extracted: " + assertions.size())
             .log();
 
-        // Step 2 & 3: Validate assertions
-        List<ValidationResult> validationResults;
+        // Log each assertion with full details
+        log.info("\n" + "─".repeat(80) + "\n" +
+                 "Extracted Assertions (Claims to Validate)\n" +
+                 "─".repeat(80))
+            .log();
 
-        // Use LLM Assertion Analyzer if available (recommended)
+        for (int i = 0; i < assertions.size(); i++) {
+            Assertion a = assertions.get(i);
+            log.info(String.format("  [%d] %s: %s | Source: %s",
+                    i+1,
+                    a.type(),
+                    a.text(),
+                    a.source()))
+                .field("assertionId", a.id())
+                .log();
+        }
+
+        log.info("─".repeat(80))
+            .log();
+
+        // Step 2: Validate assertions (LLM or Evidence Matcher)
+        List<ValidationResult> assertionValidationResults;
+
         if (assertionAnalyzer.isPresent()) {
-            log.info("Using LLM assertion analyzer for intelligent validation")
+            log.info("Using LLM assertion analyzer")
                 .field("assertionCount", assertions.size())
                 .log();
 
-            validationResults = assertionAnalyzer.get().analyzeAll(assertions, diagnosticContext);
+            assertionValidationResults = assertionAnalyzer.get().analyzeAll(assertions, diagnosticContext);
 
         } else {
-            // Fallback to rule-based evidence matching
-            log.info("Using rule-based evidence matcher (LLM analyzer not available)")
+            log.info("Using rule-based evidence matcher")
                 .field("assertionCount", assertions.size())
                 .log();
 
@@ -95,26 +169,133 @@ public class RcaValidatorImpl implements RcaValidator {
                 diagnosticContext
             );
 
-            validationResults = new ArrayList<>();
+            assertionValidationResults = new ArrayList<>();
             for (Assertion assertion : assertions) {
                 List<Evidence> evidence = evidenceMap.getOrDefault(assertion.id(), List.of());
                 ValidationResult result = validateAssertion(assertion, evidence, minimumConfidence);
-                validationResults.add(result);
+                assertionValidationResults.add(result);
             }
         }
 
-        // Step 4: Build validated RCA
+        // Log each assertion validation result
+        log.info("\n" + "─".repeat(80) + "\n" +
+                 "PATH A: Assertion Validation Results\n" +
+                 "─".repeat(80))
+            .log();
+
+        for (int i = 0; i < assertionValidationResults.size(); i++) {
+            ValidationResult result = assertionValidationResults.get(i);
+            String statusIcon = switch(result.status()) {
+                case SUPPORTED -> "✅";
+                case PARTIALLY_SUPPORTED -> "🟡";
+                case UNSUPPORTED -> "❌";
+                case UNKNOWN -> "❓";
+            };
+
+            log.info(String.format("  [%d] %s %s | Status: %s, Confidence: %.2f, Evidence: %d supporting / %d refuting",
+                    i+1,
+                    statusIcon,
+                    result.assertion().text(),
+                    result.status(),
+                    result.confidence(),
+                    result.supportingEvidence().size(),
+                    result.refutingEvidence().size()))
+                .field("assertionId", result.assertion().id())
+                .log();
+        }
+
+        log.info("\n" + separator + "\n" +
+                 "✅ PATH A COMPLETED\n" +
+                 separator)
+            .field("assertionResultsCount", assertionValidationResults.size())
+            .log();
+
+        // Log PATH A results summary
+        long supported = assertionValidationResults.stream()
+            .filter(r -> r.status() == ValidationResult.ValidationStatus.SUPPORTED)
+            .count();
+        long partial = assertionValidationResults.stream()
+            .filter(r -> r.status() == ValidationResult.ValidationStatus.PARTIALLY_SUPPORTED)
+            .count();
+        long unsupported = assertionValidationResults.stream()
+            .filter(r -> r.status() == ValidationResult.ValidationStatus.UNSUPPORTED)
+            .count();
+        long unknown = assertionValidationResults.stream()
+            .filter(r -> r.status() == ValidationResult.ValidationStatus.UNKNOWN)
+            .count();
+
+        log.info("PATH A Results: ✅ Supported=" + supported + ", 🟡 Partial=" + partial +
+                 ", ❌ Unsupported=" + unsupported + ", ❓ Unknown=" + unknown)
+            .log();
+
+        // ===== PATH B: Rule-Based Hypothesis Validation =====
+        HypothesisValidationResult ruleBasedResult = null;
+
+        if (hypothesisValidator.isPresent()) {
+            log.info("PATH B: Starting rule-based hypothesis validation")
+                .log();
+
+            ruleBasedResult = hypothesisValidator.get().validateHypothesis(rca, diagnosticContext);
+
+            log.info("\n" + separator + "\n" +
+                     "✅ PATH B COMPLETED\n" +
+                     separator)
+                .field("hypothesis", ruleBasedResult.getHypothesis())
+                .field("status", ruleBasedResult.getStatus())
+                .field("confidence", ruleBasedResult.getConfidence())
+                .field("totalScore", ruleBasedResult.getTotalScore())
+                .field("requiredRulesPassed", ruleBasedResult.getRequiredPassed())
+                .field("supportingRulesMatched", ruleBasedResult.getSupportingMatched())
+                .log();
+        } else {
+            log.info("PATH B: Skipped (hypothesis validator not available)")
+                .log();
+        }
+
+        // ===== FINAL: Aggregate Both Paths =====
+        DualValidationResult dualValidation = null;
+
+        if (ruleBasedResult != null) {
+            log.info("Aggregating dual validation results")
+                .field("strategy", DEFAULT_STRATEGY)
+                .log();
+
+            dualValidation = validationAggregator.aggregate(
+                assertionValidationResults,
+                ruleBasedResult,
+                DEFAULT_STRATEGY
+            );
+
+            log.info("\n" + separator + "\n" +
+                     "🎯 DUAL VALIDATION AGGREGATION COMPLETED\n" +
+                     separator + "\n" +
+                     "Final Status: " + dualValidation.finalVerdict().status() + "\n" +
+                     "Final Confidence: " + String.format("%.2f", dualValidation.finalVerdict().confidence()) + "\n" +
+                     "Strategy: " + dualValidation.finalVerdict().strategy() + "\n" +
+                     "PATH A Confidence: " + String.format("%.2f", dualValidation.assertionBasedVerdict().confidence()) + "\n" +
+                     "PATH B Confidence: " + String.format("%.2f", dualValidation.ruleBasedVerdict().getConfidence()) + "\n" +
+                     separator)
+                .log();
+        }
+
+        // Step 3: Build validated RCA
         ValidatedRCA validatedRCA = ValidatedRCA.builder()
             .originalRca(rca)
-            .validationResults(validationResults)
+            .validationResults(assertionValidationResults)
+            .dualValidation(dualValidation)
             .validatedAt(startTime)
             .build();
 
-        log.info("RCA validation completed")
-            .field("issueTitle", rca.issueTitle())
-            .field("validationSummary", validatedRCA.summary().toSummaryString())
-            .field("isValid", validatedRCA.isValid())
-            .field("isHighConfidence", validatedRCA.isHighConfidence())
+        String finalSeparator = "=".repeat(80);
+        log.info("\n" + finalSeparator + "\n" +
+                 "✅ RCA VALIDATION PIPELINE COMPLETED\n" +
+                 finalSeparator + "\n" +
+                 "Issue: " + rca.issueTitle() + "\n" +
+                 "Validation Summary: " + validatedRCA.summary().toSummaryString() + "\n" +
+                 "Dual Validation: " + (dualValidation != null ? dualValidation.toSummaryString() : "N/A") + "\n" +
+                 "Is Valid: " + validatedRCA.isValid() + "\n" +
+                 "Is High Confidence: " + validatedRCA.isHighConfidence() + "\n" +
+                 finalSeparator)
             .log();
 
         return validatedRCA;
@@ -282,4 +463,5 @@ public class RcaValidatorImpl implements RcaValidator {
             case UNKNOWN -> "Insufficient evidence to validate assertion";
         };
     }
+
 }

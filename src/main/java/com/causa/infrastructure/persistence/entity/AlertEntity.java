@@ -71,6 +71,20 @@ public class AlertEntity extends BaseEntity {
     private JsonNode alertMetadata;
 
     // -------------------------------------------------------------------------
+    // Field name constants for HQL queries
+    // -------------------------------------------------------------------------
+
+    /** HQL field name constants — use these in Panache queries to avoid magic strings. */
+    public static final class Fields {
+        private Fields() {}
+
+        public static final String ALERT_ID       = "id";
+        public static final String ALERT_NAME     = "alertName";
+        public static final String STATUS         = "status";
+        public static final String CONTAINER_NAME = "containerName";
+    }
+
+    // -------------------------------------------------------------------------
     // Getters and Setters
     // -------------------------------------------------------------------------
 

@@ -10,30 +10,17 @@
 --   feedback      → fdbk_<16>
 --   configurations → cnfg_<16>
 --   integrations  → intg_<16>
---   health_checks → created_at TIMESTAMP (PK, no surrogate ID)
+--   health_checks → hchk_<16>
 --
 -- IDs are generated and validated by the application layer.
 -- =============================================================================
 
 
 -- =============================================================================
--- Step 1: Enable required PostgreSQL extensions
+-- Enable required PostgreSQL extensions
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS vector;
-
-
--- =============================================================================
--- Step 2: Shared trigger function for automatic updated_at tracking
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION update_modified_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
 
 -- =============================================================================
@@ -60,11 +47,6 @@ CREATE INDEX IF NOT EXISTS idx_alerts_lookup           ON alerts (alert_name);
 CREATE INDEX IF NOT EXISTS idx_alerts_lookup_container ON alerts (container_name);
 CREATE INDEX IF NOT EXISTS idx_alerts_status           ON alerts (status);
 CREATE INDEX IF NOT EXISTS idx_alerts_created_at       ON alerts (created_at DESC);
-
-DROP TRIGGER IF EXISTS update_alerts_modtime ON alerts;
-CREATE TRIGGER update_alerts_modtime
-    BEFORE UPDATE ON alerts
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 
 -- =============================================================================
@@ -115,11 +97,6 @@ CREATE INDEX IF NOT EXISTS idx_diagnostics_alert      ON diagnostics (alert_id);
 CREATE INDEX IF NOT EXISTS idx_diagnostics_status     ON diagnostics (status);
 CREATE INDEX IF NOT EXISTS idx_diagnostics_created_at ON diagnostics (created_at DESC);
 
-DROP TRIGGER IF EXISTS update_diagnostics_modtime ON diagnostics;
-CREATE TRIGGER update_diagnostics_modtime
-    BEFORE UPDATE ON diagnostics
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-
 
 -- =============================================================================
 -- 3. CONTEXT DATA TABLE (Logs, Events, and Vector Embeddings)
@@ -150,11 +127,6 @@ CREATE INDEX IF NOT EXISTS idx_context_container_name ON context_data (container
 CREATE INDEX IF NOT EXISTS idx_context_vector ON context_data
     USING hnsw (embedding vector_cosine_ops);
 
-DROP TRIGGER IF EXISTS update_context_modtime ON context_data;
-CREATE TRIGGER update_context_modtime
-    BEFORE UPDATE ON context_data
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-
 
 -- =============================================================================
 -- 4. FEEDBACK TABLE (SRE Validations and Comments)
@@ -179,11 +151,6 @@ CREATE TABLE IF NOT EXISTS feedback (
 CREATE INDEX IF NOT EXISTS idx_feedback_diagnostics ON feedback (diagnostics_id);
 CREATE INDEX IF NOT EXISTS idx_feedback_alert       ON feedback (alert_id);
 
-DROP TRIGGER IF EXISTS update_feedback_modtime ON feedback;
-CREATE TRIGGER update_feedback_modtime
-    BEFORE UPDATE ON feedback
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-
 
 -- =============================================================================
 -- 5. CONFIGURATIONS TABLE (Global Cluster Run Parameters & Microservice States)
@@ -200,11 +167,6 @@ CREATE TABLE IF NOT EXISTS configurations (
     CONSTRAINT pk_configurations PRIMARY KEY (id),
     CONSTRAINT uq_configurations_key UNIQUE (config_key)
 );
-
-DROP TRIGGER IF EXISTS update_configurations_modtime ON configurations;
-CREATE TRIGGER update_configurations_modtime
-    BEFORE UPDATE ON configurations
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 
 -- =============================================================================
@@ -223,30 +185,21 @@ CREATE TABLE IF NOT EXISTS integrations (
     CONSTRAINT uq_integrations_platform UNIQUE (target_platform)
 );
 
-DROP TRIGGER IF EXISTS update_integrations_modtime ON integrations;
-CREATE TRIGGER update_integrations_modtime
-    BEFORE UPDATE ON integrations
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-
 
 -- =============================================================================
 -- 7. HEALTH CHECKS TABLE (Causa Engine Metrics & Downstream Heartbeats)
--- PK: created_at TIMESTAMP (time-series by design — no surrogate ID)
+-- ID convention: hchk_<16-char-alphanumeric>
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS health_checks (
-    overall_status VARCHAR(32) NOT NULL,   -- UP, DEGRADED, DOWN
-    component_info JSONB       NOT NULL,
+    id             VARCHAR(21)              NOT NULL,
+    overall_status VARCHAR(32)              NOT NULL,   -- UP, DEGRADED, DOWN
+    component_info JSONB                    NOT NULL,
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT pk_health_checks PRIMARY KEY (created_at)
+    CONSTRAINT pk_health_checks PRIMARY KEY (id)
 );
 
 -- Crucial for the 15-day pruning process execution window
 CREATE INDEX IF NOT EXISTS idx_health_cleanup ON health_checks (created_at);
-
-DROP TRIGGER IF EXISTS update_health_modtime ON health_checks;
-CREATE TRIGGER update_health_modtime
-    BEFORE UPDATE ON health_checks
-    FOR EACH ROW EXECUTE FUNCTION update_modified_column();

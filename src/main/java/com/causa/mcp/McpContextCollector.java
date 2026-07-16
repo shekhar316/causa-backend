@@ -21,14 +21,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
  * MCP Context Collector
  *
- * <p>Collects diagnostic context from Kubernetes and Kruize MCP servers.
- * Calls MCP tools and logs results for diagnostic analysis.
+ * <p>Collects diagnostic context from MCP servers. Routes to either the cluster path
+ * (Kubernetes, Kruize, Cryostat) or the VM path (Filesystem MCP, Java MCP) based on the
+ * {@code causa.platform} application property (env: {@code CAUSA_PLATFORM}).
  *
- * <p>This is an MVP implementation that prints context to logs without storing it.
+ * <p>Supported platform values: {@code cluster} (default), {@code vm}.
  *
  * @since 0.0.1
  */
@@ -38,12 +40,18 @@ public class McpContextCollector {
     private static final CausaLogger log = CausaLogger.getLogger(McpContextCollector.class);
 
     private final AppConfig appConfig;
+    private final McpSimulator simulator;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
+    private final String platform;
 
     @Inject
-    public McpContextCollector(AppConfig appConfig) {
+    public McpContextCollector(AppConfig appConfig,
+            McpSimulator simulator,
+            @ConfigProperty(name = "causa.platform", defaultValue = "cluster") String platform) {
         this.appConfig = appConfig;
+        this.simulator = simulator;
+        this.platform = platform != null ? platform.trim().toLowerCase() : "cluster";
         this.objectMapper = new ObjectMapper();
         this.httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
@@ -52,15 +60,41 @@ public class McpContextCollector {
     }
 
     /**
-     * Collects diagnostic context from all MCP servers (Kubernetes, Kruize, Cryostat).
+     * Collects diagnostic context from all MCP servers appropriate for the configured platform.
      *
-     * <p>Aggregates pod status, events, logs, resource recommendations, and JFR analysis
-     * into a single {@link DiagnosticContext} object for LLM consumption.
+     * <ul>
+     *   <li>{@code cluster} — calls Kubernetes, Kruize, and Cryostat MCP servers.</li>
+     *   <li>{@code vm}      — calls Filesystem MCP and Java MCP servers.</li>
+     * </ul>
      *
      * @param alert the alert to collect context for
      * @return diagnostic context with all collected data (fields are nullable on failure)
      */
     public DiagnosticContext collectContext(Alert alert) {
+        log.info(LogMessages.Mcp.MCP_PLATFORM_DETECTED)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.PLATFORM, platform)
+            .log();
+
+        if ("vm".equals(platform)) {
+            return collectContextFromVm(alert);
+        }
+
+        return collectContextFromCluster(alert);
+    }
+
+    // =========================================================================
+    // Cluster path
+    // =========================================================================
+
+    /**
+     * Collects diagnostic context when running on a Kubernetes cluster.
+     * Calls Kubernetes, Kruize, and Cryostat MCP servers.
+     *
+     * @param alert the alert to collect context for
+     * @return diagnostic context with all collected data
+     */
+    private DiagnosticContext collectContextFromCluster(Alert alert) {
         log.info(LogMessages.Mcp.MCP_CONTEXT_COLLECTION_START)
             .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
             .field(McpConstants.LogFields.POD_NAME, alert.getPodName())
@@ -68,7 +102,9 @@ public class McpContextCollector {
             .log();
 
         DiagnosticContext.Builder contextBuilder = DiagnosticContext.builder()
+            .platform(DiagnosticContext.PLATFORM_CLUSTER)
             .podName(alert.getPodName())
+            .workloadName(alert.getWorkloadName() != null ? alert.getWorkloadName() : alert.getContainerName())
             .containerName(alert.getContainerName())
             .namespace(alert.getNamespace());
 
@@ -119,7 +155,149 @@ public class McpContextCollector {
         return context;
     }
 
+    // =========================================================================
+    // VM path
+    // =========================================================================
 
+    /**
+     * Collects diagnostic context when running on a VM (virtual machine) deployment.
+     * Calls Filesystem MCP and Java MCP servers.
+     *
+     * <p>All VM platform MCP data is served via {@link McpSimulator}.
+     * Replace simulator calls with real MCP calls once each server is available.
+     *
+     * @param alert the alert to collect context for
+     * @return diagnostic context with all collected data (fields are nullable on failure)
+     */
+    private DiagnosticContext collectContextFromVm(Alert alert) {
+        log.info(LogMessages.Mcp.MCP_VM_CONTEXT_COLLECTION_START)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.POD_NAME, alert.getPodName())
+            .log();
+
+        DiagnosticContext.Builder contextBuilder = DiagnosticContext.builder()
+            .platform(DiagnosticContext.PLATFORM_VM)
+            .podName(alert.getPodName())
+            .workloadName(alert.getWorkloadName())
+            .containerName(alert.getContainerName())
+            .namespace(alert.getNamespace());
+
+        // Filesystem MCP context collection (VM platform)
+        collectFilesystemContext(contextBuilder, alert);
+
+        // Java MCP context collection (VM platform)
+        collectJavaMcpContext(contextBuilder, alert);
+
+        DiagnosticContext context = contextBuilder.build();
+
+        log.info(LogMessages.Mcp.MCP_VM_CONTEXT_COLLECTION_COMPLETE)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.HAS_FILESYSTEM_CONTEXT, context.hasFilesystemContext())
+            .field(McpConstants.LogFields.HAS_JAVA_CONTEXT, context.hasJavaMcpContext())
+            .log();
+
+        return context;
+    }
+
+    /**
+     * Collects Filesystem MCP context for VM deployments.
+     *
+     * <p>Uses {@link McpSimulator} for the two primary tools:
+     * {@code list_directory_with_sizes} (server log directory listing) and
+     * {@code read_text_file} (verboseGC log content).
+     *
+     * @param builder the context builder to populate
+     * @param alert   the alert
+     */
+    private void collectFilesystemContext(DiagnosticContext.Builder builder, Alert alert) {
+        // list_directory_with_sizes
+        String dirListing = simulator.getFilesystemDirectoryListing();
+        builder.logDirectoryListing(dirListing);
+        log.info(LogMessages.Mcp.MCP_FILESYSTEM_DIR_LISTING)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.FILESYSTEM_LIST_DIRECTORY_WITH_SIZES)
+            .log();
+
+        // read_text_file
+        String fileContent = simulator.getFilesystemFileContent();
+        builder.gcLogContent(fileContent);
+        log.info(LogMessages.Mcp.MCP_FILESYSTEM_FILE_CONTENT)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.FILESYSTEM_READ_TEXT_FILE)
+            .log();
+    }
+
+    /**
+     * Collects Java JMX MCP context for VM deployments.
+     *
+     * <p>Calls 7 tools from the jvm-jmx-mcp server via {@link McpSimulator}:
+     * <ol>
+     *   <li>{@code getHeapStatus}               → {@code heapStatus}</li>
+     *   <li>{@code getGcActivity}               → {@code gcActivity}</li>
+     *   <li>{@code getThreadState}              → {@code threadState}</li>
+     *   <li>{@code getGcPressureAnalysis}       → {@code gcPressureAnalysis}</li>
+     *   <li>{@code getMemoryLeakIndicators}     → {@code memoryLeakIndicators}</li>
+     *   <li>{@code getThreadContentionAnalysis} → {@code threadContentionAnalysis}</li>
+     *   <li>{@code getJvmRuntimeInfo}           → {@code jvmRuntimeInfo}</li>
+     * </ol>
+     *
+     * @param builder the context builder to populate
+     * @param alert   the alert
+     */
+    private void collectJavaMcpContext(DiagnosticContext.Builder builder, Alert alert) {
+        // getHeapStatus
+        builder.heapStatus(simulator.getJavaHeapStatus());
+        log.info(LogMessages.Mcp.MCP_JAVA_HEAP_STATUS)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.JAVA_GET_HEAP_STATUS)
+            .log();
+
+        // getGcActivity
+        builder.gcActivity(simulator.getJavaGcActivity());
+        log.info(LogMessages.Mcp.MCP_JAVA_GC_ACTIVITY)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.JAVA_GET_GC_ACTIVITY)
+            .log();
+
+        // getThreadState
+        builder.threadState(simulator.getJavaThreadState());
+        log.info(LogMessages.Mcp.MCP_JAVA_THREAD_STATE)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.JAVA_GET_THREAD_STATE)
+            .log();
+
+        // getGcPressureAnalysis
+        builder.gcPressureAnalysis(simulator.getJavaGcPressureAnalysis());
+        log.info(LogMessages.Mcp.MCP_JAVA_GC_PRESSURE)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.JAVA_GET_GC_PRESSURE_ANALYSIS)
+            .log();
+
+        // getMemoryLeakIndicators
+        builder.memoryLeakIndicators(simulator.getJavaMemoryLeakIndicators());
+        log.info(LogMessages.Mcp.MCP_JAVA_MEMORY_LEAK_INDICATORS)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.JAVA_GET_MEMORY_LEAK_INDICATORS)
+            .log();
+
+        // getThreadContentionAnalysis
+        builder.threadContentionAnalysis(simulator.getJavaThreadContentionAnalysis());
+        log.info(LogMessages.Mcp.MCP_JAVA_THREAD_CONTENTION)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.JAVA_GET_THREAD_CONTENTION_ANALYSIS)
+            .log();
+
+        // getJvmRuntimeInfo
+        builder.jvmRuntimeInfo(simulator.getJavaJvmRuntimeInfo());
+        log.info(LogMessages.Mcp.MCP_JAVA_JVM_RUNTIME_INFO)
+            .field(McpConstants.LogFields.ALERT_ID, alert.getAlertId())
+            .field(McpConstants.LogFields.TOOL, McpConstants.Tools.JAVA_GET_JVM_RUNTIME_INFO)
+            .log();
+    }
+
+    // =========================================================================
+    // Kubernetes helpers
+    // =========================================================================
 
     /**
      * Calls Kubernetes MCP pods_get tool to retrieve pod status.

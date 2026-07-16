@@ -55,12 +55,20 @@ public class AlertEntity extends BaseEntity {
      * Shape: {@code { "name": "...", "namespace": "...", "pod": "..." }}.
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(columnDefinition = "jsonb")
     private JsonNode containerInfo;
 
-    /** Extracted container name for fast indexed lookups (denormalised from containerInfo). */
-    @Column(nullable = false, length = 255)
+    /** Extracted container name for fast indexed lookups (denormalised from containerInfo). Nullable for VM platform. */
+    @Column(length = 255)
     private String containerName;
+
+    /** Resolved workload name (container or service). Nullable. */
+    @Column(length = 255)
+    private String workloadName;
+
+    /** Deployment platform: {@code cluster} or {@code vm}. Nullable. */
+    @Column(length = 32)
+    private String platform;
 
     /**
      * Catch-all JSONB bag for raw Prometheus labels, annotations, and any future fields.
@@ -82,6 +90,8 @@ public class AlertEntity extends BaseEntity {
         public static final String ALERT_NAME     = "alertName";
         public static final String STATUS         = "status";
         public static final String CONTAINER_NAME = "containerName";
+        public static final String WORKLOAD_NAME  = "workloadName";
+        public static final String PLATFORM       = "platform";
     }
 
     // -------------------------------------------------------------------------
@@ -111,6 +121,12 @@ public class AlertEntity extends BaseEntity {
 
     public String getContainerName() { return containerName; }
     public void setContainerName(String containerName) { this.containerName = containerName; }
+
+    public String getWorkloadName() { return workloadName; }
+    public void setWorkloadName(String workloadName) { this.workloadName = workloadName; }
+
+    public String getPlatform() { return platform; }
+    public void setPlatform(String platform) { this.platform = platform; }
 
     public JsonNode getAlertMetadata() { return alertMetadata; }
     public void setAlertMetadata(JsonNode alertMetadata) { this.alertMetadata = alertMetadata; }

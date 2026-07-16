@@ -236,12 +236,56 @@ public final class ConfigConstants {
             );
         }
 
+        /**
+         * Filesystem MCP server configuration key constants (VM platform).
+         */
+        public static final class Filesystem {
+            private Filesystem() {}
+
+            /** Filesystem MCP server endpoint URL. */
+            public static final String ENDPOINT    = "CAUSA_MCP_FILESYSTEM_ENDPOINT";
+
+            /** Health check path for the Filesystem MCP server. */
+            public static final String HEALTH_PATH = "CAUSA_MCP_FILESYSTEM_HEALTH_PATH";
+
+            /** HTTP timeout in milliseconds for the Filesystem MCP server. */
+            public static final String TIMEOUT     = "CAUSA_MCP_FILESYSTEM_TIMEOUT";
+
+            /** Immutable set of all valid Filesystem MCP key names. */
+            public static final java.util.Set<String> ALL_KEYS = java.util.Set.of(
+                    ENDPOINT, HEALTH_PATH, TIMEOUT
+            );
+        }
+
+        /**
+         * Java MCP server configuration key constants (VM platform).
+         */
+        public static final class Java {
+            private Java() {}
+
+            /** Java MCP server endpoint URL. */
+            public static final String ENDPOINT    = "CAUSA_MCP_JAVA_ENDPOINT";
+
+            /** Health check path for the Java MCP server. */
+            public static final String HEALTH_PATH = "CAUSA_MCP_JAVA_HEALTH_PATH";
+
+            /** HTTP timeout in milliseconds for the Java MCP server. */
+            public static final String TIMEOUT     = "CAUSA_MCP_JAVA_TIMEOUT";
+
+            /** Immutable set of all valid Java MCP key names. */
+            public static final java.util.Set<String> ALL_KEYS = java.util.Set.of(
+                    ENDPOINT, HEALTH_PATH, TIMEOUT
+            );
+        }
+
         /** Immutable set of ALL valid MCP key names across all sub-categories. */
         public static final java.util.Set<String> ALL_KEYS = java.util.Collections.unmodifiableSet(
                 java.util.stream.Stream.of(
                         Kubernetes.ALL_KEYS,
                         Kruize.ALL_KEYS,
-                        Cryostat.ALL_KEYS
+                        Cryostat.ALL_KEYS,
+                        Filesystem.ALL_KEYS,
+                        Java.ALL_KEYS
                 ).flatMap(java.util.Set::stream)
                  .collect(java.util.stream.Collectors.toSet())
         );
@@ -437,11 +481,12 @@ public final class ConfigConstants {
                     java.util.Map.entry(LLM.API_KEY,           "causa.llm.api-key"),
                     java.util.Map.entry(LLM.TIMEOUT_SECONDS,   "causa.llm.timeout-seconds"),
                     java.util.Map.entry(LLM.CHAT_MEMORY_SIZE,  "causa.llm.chat-memory-size"),
-                    java.util.Map.entry(LLM.VERTEX_PROJECT_ID, "causa.llm.vertex.project-id"),
-                    java.util.Map.entry(LLM.VERTEX_LOCATION,   "causa.llm.vertex.location"),
-                    java.util.Map.entry(LLM.BOB_SHELL_PATH,    "causa.llm.bob.shell-path"),
-                    // GOOGLE_APPLICATION_CREDENTIALS has no application.yml entry —
-                    // its value is stored only in the DB (Base64-encoded ADC JSON).
+                    java.util.Map.entry(LLM.VERTEX_PROJECT_ID,              "causa.llm.vertex.project-id"),
+                    java.util.Map.entry(LLM.VERTEX_LOCATION,                "causa.llm.vertex.location"),
+                    java.util.Map.entry(LLM.GOOGLE_APPLICATION_CREDENTIALS, "causa.llm.vertex.google-credentials"),
+                    java.util.Map.entry(LLM.BOB_SHELL_PATH,                 "causa.llm.bob.shell-path"),
+                    // GOOGLE_APPLICATION_CREDENTIALS is also read from ENV directly via the
+                    // MP property above and from the DB (encrypted). All three sources work.
                     // --- Alert ---
                     java.util.Map.entry(Alert.FILTER_SEVERITY,           "causa.alerts.filter-severity"),
                     java.util.Map.entry(Alert.COOLDOWN_MINUTES,          "causa.alerts.cooldown-minutes"),
@@ -462,6 +507,14 @@ public final class ConfigConstants {
                     java.util.Map.entry(MCP.Cryostat.TIMEOUT,         "causa.mcp.cryostat.timeout-ms"),
                     java.util.Map.entry(MCP.Cryostat.RETRY_DELAY,     "causa.mcp.cryostat.retry-delay-ms"),
                     java.util.Map.entry(MCP.Cryostat.MAX_RETRIES,     "causa.mcp.cryostat.max-retries"),
+                    // --- MCP: Filesystem ---
+                    java.util.Map.entry(MCP.Filesystem.ENDPOINT,    "causa.mcp.filesystem.endpoint"),
+                    java.util.Map.entry(MCP.Filesystem.HEALTH_PATH, "causa.mcp.filesystem.health-path"),
+                    java.util.Map.entry(MCP.Filesystem.TIMEOUT,     "causa.mcp.filesystem.timeout-ms"),
+                    // --- MCP: Java ---
+                    java.util.Map.entry(MCP.Java.ENDPOINT,    "causa.mcp.java.endpoint"),
+                    java.util.Map.entry(MCP.Java.HEALTH_PATH, "causa.mcp.java.health-path"),
+                    java.util.Map.entry(MCP.Java.TIMEOUT,     "causa.mcp.java.timeout-ms"),
                     // --- Cluster ---
                     java.util.Map.entry(Cluster.CLUSTER_NAME, "causa.cluster.name")
             );

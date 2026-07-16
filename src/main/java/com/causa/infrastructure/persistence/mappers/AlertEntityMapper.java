@@ -77,14 +77,18 @@ public final class AlertEntityMapper {
         // Severity + Causa lifecycle status
         entity.setSeverity(alert.getSeverity() != null ? alert.getSeverity().getValue() : null);
         entity.setStatus(processingStatus);
-        entity.setContainerName(alert.getContainerName() != null ? alert.getContainerName() : "");
+        entity.setPlatform(alert.getPlatform());
+        entity.setContainerName(alert.getContainerName());
+        // workload_name: use explicit workloadName if set; fall back to containerName for cluster
+        entity.setWorkloadName(alert.getWorkloadName() != null
+            ? alert.getWorkloadName()
+            : alert.getContainerName());
 
-        // container_info JSONB: name, pod, namespace, clusterName
+        // container_info JSONB: name, pod, namespace
         ObjectNode containerInfo = objectMapper.createObjectNode();
-        containerInfo.put("name",        alert.getContainerName() != null ? alert.getContainerName() : "");
-        containerInfo.put("pod",         alert.getPodName()       != null ? alert.getPodName()       : "");
-        containerInfo.put("namespace",   alert.getNamespace()     != null ? alert.getNamespace()     : "");
-        containerInfo.put("clusterName", "");   // populated by future cluster-aware context
+        containerInfo.put("name",      alert.getContainerName() != null ? alert.getContainerName() : "");
+        containerInfo.put("pod",       alert.getPodName()       != null ? alert.getPodName()       : "");
+        containerInfo.put("namespace", alert.getNamespace()     != null ? alert.getNamespace()     : "");
         entity.setContainerInfo(containerInfo);
 
         // alert_metadata JSONB: prometheus_status, fingerprint, endsAt, generatorURL, labels, annotations, rejection_reason?
@@ -119,6 +123,7 @@ public final class AlertEntityMapper {
             pod           = entity.getContainerInfo().path("pod").asText(null);
             namespace     = entity.getContainerInfo().path("namespace").asText(null);
         }
+        String platform = entity.getPlatform();
 
         // Unpack alert_metadata JSONB
         java.util.Map<String, String> labels      = null;
@@ -161,7 +166,9 @@ public final class AlertEntityMapper {
             .severity(AlertSeverity.fromString(entity.getSeverity()))
             .podName(pod)
             .containerName(containerName)
+            .workloadName(entity.getWorkloadName())
             .namespace(namespace)
+            .platform(platform)
             .prometheusStatus(prometheusStatus)
             .processingStatus(entity.getStatus())   // ACCEPTED / REJECTED / PROCESSING / PROCESSED
             .hasDiagnostics(false)

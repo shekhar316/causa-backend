@@ -34,8 +34,10 @@ CREATE TABLE IF NOT EXISTS alerts (
     alert_timestamp  TIMESTAMP WITH TIME ZONE,
     severity         VARCHAR(32),
     status           VARCHAR(32)              NOT NULL,   -- ACCEPTED, REJECTED, PROCESSING, PROCESSED
-    container_info   JSONB                    NOT NULL,
-    container_name   VARCHAR(255)             NOT NULL,
+    container_info   JSONB,
+    container_name   VARCHAR(255),
+    workload_name    VARCHAR(255),                        -- resolved workload name (container or service)
+    platform         VARCHAR(32),                        -- cluster | vm
     alert_metadata   JSONB,
     created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -105,7 +107,8 @@ CREATE INDEX IF NOT EXISTS idx_diagnostics_created_at ON diagnostics (created_at
 CREATE TABLE IF NOT EXISTS context_data (
     id               VARCHAR(21)  NOT NULL,
     alert_id         VARCHAR(21)  NOT NULL,
-    container_name   VARCHAR(255) NOT NULL,
+    container_name   VARCHAR(255),
+    workload_name    VARCHAR(255),                        -- resolved workload name (container or service)
     context_type     VARCHAR(64)  NOT NULL,   -- K8S_LOGS, JFR_REPORT, KRUIZE_METRICS
     content          TEXT         NOT NULL,
 

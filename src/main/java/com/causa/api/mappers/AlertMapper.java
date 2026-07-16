@@ -9,6 +9,7 @@ import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,16 +21,24 @@ import java.util.Map;
  * <p>Maps Prometheus Alertmanager webhook DTOs to domain Alert objects.
  * <p>Handles label extraction, timestamp parsing, and alert ID generation.
  *
+ * <p>Platform resolution: alert label {@code platform} → app-level {@code causa.platform}
+ * → default {@code "cluster"}. This ensures VM deployments don't need a {@code platform}
+ * label in every Prometheus rule.
+ *
  * @since 0.0.1
  */
 @ApplicationScoped
 public class AlertMapper {
 
     private final String defaultSeverity;
+    private final String configuredPlatform;
 
     @Inject
-    public AlertMapper(AppConfig appConfig) {
+    public AlertMapper(AppConfig appConfig,
+                       @ConfigProperty(name = "causa.platform", defaultValue = "cluster")
+                       String configuredPlatform) {
         this.defaultSeverity = appConfig.getAlertConfig().getFilterSeverity();
+        this.configuredPlatform = configuredPlatform != null ? configuredPlatform.trim().toLowerCase() : "cluster";
     }
 
     /**
@@ -64,12 +73,19 @@ public class AlertMapper {
 
         // Required fields (validated before this is called)
         String alertName = labels.get(AlertConstants.Labels.ALERT_NAME);
+
+        // Effective platform: alert label → app-level config → default cluster
+        String platform = labels.getOrDefault(AlertConstants.Labels.PLATFORM, configuredPlatform);
+
+        // cluster-only fields — nullable for vm platform
         String container = labels.get(AlertConstants.Labels.CONTAINER);
         String namespace = getLabelWithFallback(labels, annotations, AlertConstants.Labels.NAMESPACE);
 
         // Optional fields
-        String pod         = labels.get(AlertConstants.Labels.POD);
-        String severityStr = labels.getOrDefault(AlertConstants.Labels.SEVERITY, defaultSeverity);
+        String pod          = labels.get(AlertConstants.Labels.POD);
+        String severityStr  = labels.getOrDefault(AlertConstants.Labels.SEVERITY, defaultSeverity);
+        // workload_name label used on VM platform (e.g. "daytrader"); falls back to container for cluster
+        String workloadName = labels.getOrDefault(AlertConstants.Labels.WORKLOAD_NAME, container);
 
         Instant timestamp = parseTimestamp(item.getStartsAt());
 
@@ -88,6 +104,8 @@ public class AlertMapper {
             .podName(pod)
             .containerName(container)
             .namespace(namespace)
+            .platform(platform)
+            .workloadName(workloadName)
             .prometheusStatus(AlertStatus.fromString(item.getStatus()))
             .hasDiagnostics(false)
             .labels(labels)

@@ -19,11 +19,21 @@ public final class AlertConstants {
     public static final class Labels {
         private Labels() {}
 
-        public static final String ALERT_NAME = "alertname";
-        public static final String SEVERITY = "severity";
-        public static final String NAMESPACE = "namespace";
-        public static final String POD = "pod";
-        public static final String CONTAINER = "container";
+        public static final String ALERT_NAME    = "alertname";
+        public static final String SEVERITY      = "severity";
+        public static final String NAMESPACE     = "namespace";
+        public static final String POD           = "pod";
+        public static final String CONTAINER     = "container";
+        /** Workload name label (VM platform): service/process name, e.g. {@code daytrader}. */
+        public static final String WORKLOAD_NAME = "workload_name";
+        /** Deployment platform label: {@code cluster} (default) or {@code vm}. */
+        public static final String PLATFORM      = "platform";
+
+        /** Value indicating a Kubernetes cluster deployment. */
+        public static final String PLATFORM_CLUSTER = "cluster";
+
+        /** Value indicating a VM deployment. */
+        public static final String PLATFORM_VM = "vm";
     }
 
 

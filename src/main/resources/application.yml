@@ -68,7 +68,9 @@ quarkus:
   flyway:
     migrate-at-start: true
     locations: classpath:db/migration
+    repair-at-start: true
     baseline-on-migrate: true
+    baseline-version: 0
     validate-on-migrate: true
     out-of-order: false
 
@@ -109,6 +111,9 @@ causa:
     vertex:
       project-id: ${VERTEX_PROJECT_ID:}
       location: ${VERTEX_LOCATION:}
+      # Base64-encoded Google ADC JSON. Set GOOGLE_APPLICATION_CREDENTIALS env var
+      # or override in application.properties. No file mount required.
+      google-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
     bob:
       shell-path: bob
     skills:
@@ -120,6 +125,9 @@ causa:
     cooldown-minutes: ${CAUSA_ALERT_COOLDOWN:15}
     ignore-namespaces: ${CAUSA_ALERT_IGNORE_NS:kube-system,istio-system}
     cooldown-cleanup-interval: ${CAUSA_ALERT_COOLDOWN_CLEANUP_INTERVAL:5m}
+
+  # Deployment platform: "cluster" (default) or "vm"
+  platform: ${CAUSA_PLATFORM:vm}
 
   mcp:
     kubernetes:
@@ -137,10 +145,14 @@ causa:
       timeout-ms: ${CAUSA_MCP_CRYOSTAT_TIMEOUT:15000}
       retry-delay-ms: ${CAUSA_MCP_CRYOSTAT_RETRY_DELAY:5000}
       max-retries: ${CAUSA_MCP_CRYOSTAT_MAX_RETRIES:3}
-  
-  validation:
-    assertion-extractor: ${CAUSA_VALIDATION_ASSERTION_EXTRACTOR:llm}
-    assertion-analyzer: ${CAUSA_VALIDATION_ASSERTION_ANALYZER:llm}
+    filesystem:
+      endpoint: ${CAUSA_MCP_FILESYSTEM_ENDPOINT:http://filesystem-mcp-server:8080}
+      health-path: ${CAUSA_MCP_FILESYSTEM_HEALTH_PATH:/healthz}
+      timeout-ms: ${CAUSA_MCP_FILESYSTEM_TIMEOUT:10000}
+    java:
+      endpoint: ${CAUSA_MCP_JAVA_ENDPOINT:http://java-mcp-server:8080}
+      health-path: ${CAUSA_MCP_JAVA_HEALTH_PATH:/healthz}
+      timeout-ms: ${CAUSA_MCP_JAVA_TIMEOUT:10000}
 
 #   # Feature Flags (Runtime configurable)
 #   features:
@@ -156,15 +168,16 @@ causa:
     datasource:
       # Dev-only password default to avoid build-time DataSource bean creation failure
       # Production uses Kubernetes secrets via CAUSA_DB_PASSWORD env var
-      password: ${CAUSA_DB_PASSWORD:dev_password}
+      password: ${CAUSA_DB_PASSWORD:${CAUSA_DB_PASSWORD:}}
       jdbc:
-        url: ${CAUSA_DB_URL:jdbc:postgresql://localhost:5432/iri-db}
+        url: ${CAUSA_DB_URL:${CAUSA_DB_URL:}}
   causa:
     # LLM Configuration (LangChain4J)
     llm:
       provider: ${LLM_PROVIDER:vertex-ai-anthropic}
       model-name: ${LLM_MODEL_NAME:claude-sonnet-4-6}
       vertex:
-        project-id: ${VERTEX_PROJECT_ID:}
+        project-id: ${VERTEX_PROJECT_ID:${VERTEX_PROJECT_ID:}}
         location: ${VERTEX_LOCATION:us-east5}
+        google-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:${GOOGLE_APPLICATION_CREDENTIALS:}}        
 

@@ -35,9 +35,13 @@ public class ContextDataEntity extends BaseEntity {
                 foreignKey = @ForeignKey(name = "fk_context_data_alert"))
     private AlertEntity alert;
 
-    /** Container name — denormalised for fast indexed lookups. */
-    @Column(nullable = false, length = 255)
+    /** Container name — denormalised for fast indexed lookups. Nullable for VM platform. */
+    @Column(length = 255)
     private String containerName;
+
+    /** Workload name — resolved workload (container or service name). Nullable for backwards compatibility. */
+    @Column(length = 255)
+    private String workloadName;
 
     /**
      * Type of context collected.
@@ -92,6 +96,9 @@ public class ContextDataEntity extends BaseEntity {
 
     public String getContainerName() { return containerName; }
     public void setContainerName(String containerName) { this.containerName = containerName; }
+
+    public String getWorkloadName() { return workloadName; }
+    public void setWorkloadName(String workloadName) { this.workloadName = workloadName; }
 
     public String getContextType() { return contextType; }
     public void setContextType(String contextType) { this.contextType = contextType; }

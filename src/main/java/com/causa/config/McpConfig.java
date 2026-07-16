@@ -20,11 +20,15 @@ public final class McpConfig {
     private final KubernetesConfig kubernetes;
     private final KruizeConfig     kruize;
     private final CryostatConfig   cryostat;
+    private final FilesystemConfig filesystem;
+    private final JavaConfig       java;
 
     McpConfig(Map<String, String> cache) {
         this.kubernetes = new KubernetesConfig(cache);
         this.kruize     = new KruizeConfig(cache);
         this.cryostat   = new CryostatConfig(cache);
+        this.filesystem = new FilesystemConfig(cache);
+        this.java       = new JavaConfig(cache);
     }
 
     /** Kubernetes MCP server configuration. */
@@ -40,6 +44,16 @@ public final class McpConfig {
     /** Cryostat MCP server configuration. */
     public CryostatConfig getCryostat() {
         return cryostat;
+    }
+
+    /** Filesystem MCP server configuration (VM platform). */
+    public FilesystemConfig getFilesystem() {
+        return filesystem;
+    }
+
+    /** Java MCP server configuration (VM platform). */
+    public JavaConfig getJava() {
+        return java;
     }
 
     // -------------------------------------------------------------------------
@@ -165,6 +179,76 @@ public final class McpConfig {
         /** Maximum retry attempts; defaults to {@code 3} if not set. */
         public int getMaxRetries() {
             return maxRetries != null ? Integer.parseInt(maxRetries) : 3;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Filesystem (VM platform)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Filesystem MCP server configuration snapshot (VM platform).
+     */
+    public static final class FilesystemConfig {
+
+        private final String endpoint;
+        private final String healthPath;
+        private final String timeout;
+
+        FilesystemConfig(Map<String, String> cache) {
+            this.endpoint   = cache.get(ConfigConstants.MCP.Filesystem.ENDPOINT);
+            this.healthPath = cache.get(ConfigConstants.MCP.Filesystem.HEALTH_PATH);
+            this.timeout    = cache.get(ConfigConstants.MCP.Filesystem.TIMEOUT);
+        }
+
+        /** Filesystem MCP server endpoint URL. */
+        public String getEndpoint() {
+            return endpoint != null ? endpoint : "";
+        }
+
+        /** Health check path; defaults to {@code "/healthz"} if not set. */
+        public String getHealthPath() {
+            return healthPath != null ? healthPath : "/healthz";
+        }
+
+        /** HTTP timeout in milliseconds; defaults to {@code 10000} if not set. */
+        public int getTimeoutMs() {
+            return timeout != null ? Integer.parseInt(timeout) : 10000;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Java (VM platform)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Java MCP server configuration snapshot (VM platform).
+     */
+    public static final class JavaConfig {
+
+        private final String endpoint;
+        private final String healthPath;
+        private final String timeout;
+
+        JavaConfig(Map<String, String> cache) {
+            this.endpoint   = cache.get(ConfigConstants.MCP.Java.ENDPOINT);
+            this.healthPath = cache.get(ConfigConstants.MCP.Java.HEALTH_PATH);
+            this.timeout    = cache.get(ConfigConstants.MCP.Java.TIMEOUT);
+        }
+
+        /** Java MCP server endpoint URL. */
+        public String getEndpoint() {
+            return endpoint != null ? endpoint : "";
+        }
+
+        /** Health check path; defaults to {@code "/healthz"} if not set. */
+        public String getHealthPath() {
+            return healthPath != null ? healthPath : "/healthz";
+        }
+
+        /** HTTP timeout in milliseconds; defaults to {@code 10000} if not set. */
+        public int getTimeoutMs() {
+            return timeout != null ? Integer.parseInt(timeout) : 10000;
         }
     }
 }

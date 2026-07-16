@@ -24,6 +24,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,16 +54,20 @@ public class AlertWebhookController {
     private final DiagnosticService diagnosticService;
     private final AlertRepository alertRepository;
     private final AlertMapper alertMapper;
+    private final String configuredPlatform;
 
     @Inject
     public AlertWebhookController(AlertService alertService,
                                    DiagnosticService diagnosticService,
                                    AlertRepository alertRepository,
-                                   AlertMapper alertMapper) {
+                                   AlertMapper alertMapper,
+                                   @ConfigProperty(name = "causa.platform", defaultValue = "cluster")
+                                   String configuredPlatform) {
         this.alertService = alertService;
         this.diagnosticService = diagnosticService;
         this.alertRepository = alertRepository;
         this.alertMapper = alertMapper;
+        this.configuredPlatform = configuredPlatform != null ? configuredPlatform.trim().toLowerCase() : "cluster";
     }
 
     // -------------------------------------------------------------------------
@@ -89,8 +94,8 @@ public class AlertWebhookController {
             .field("rawPayload", request)
             .log();
 
-        // Validate request
-        List<String> validationErrors = AlertWebhookValidator.validate(request);
+        // Validate request — pass app-level platform so VM deployments skip cluster-only checks
+        List<String> validationErrors = AlertWebhookValidator.validate(request, configuredPlatform);
         if (!validationErrors.isEmpty()) {
             log.warn(LogMessages.Alert.ALERT_VALIDATION_FAILED)
                 .field("errors", validationErrors)

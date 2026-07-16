@@ -86,6 +86,65 @@ public final class McpConstants {
         public static final String CRYOSTAT_GET_THREAD_ANALYSIS = "get_thread_analysis";
         public static final String CRYOSTAT_GET_EXCEPTION_ANALYSIS = "get_exception_analysis";
         public static final String CRYOSTAT_GET_CONTAINER_ANALYSIS = "get_container_analysis";
+
+        // Filesystem MCP tools (VM platform) — https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
+        public static final String FILESYSTEM_READ_TEXT_FILE           = "read_text_file";
+        public static final String FILESYSTEM_READ_MEDIA_FILE          = "read_media_file";
+        public static final String FILESYSTEM_READ_MULTIPLE_FILES      = "read_multiple_files";
+        public static final String FILESYSTEM_LIST_DIRECTORY           = "list_directory";
+        public static final String FILESYSTEM_LIST_DIRECTORY_WITH_SIZES = "list_directory_with_sizes";
+        public static final String FILESYSTEM_DIRECTORY_TREE           = "directory_tree";
+        public static final String FILESYSTEM_SEARCH_FILES             = "search_files";
+        public static final String FILESYSTEM_GET_FILE_INFO            = "get_file_info";
+        public static final String FILESYSTEM_LIST_ALLOWED_DIRECTORIES = "list_allowed_directories";
+        public static final String FILESYSTEM_CREATE_DIRECTORY         = "create_directory";
+
+        // Java JMX MCP tools (VM platform) — jvm-jmx-mcp server
+        // Memory
+        public static final String JAVA_GET_HEAP_STATUS              = "getHeapStatus";
+        public static final String JAVA_GET_MEMORY_POOLS_BREAKDOWN   = "getMemoryPoolsBreakdown";
+        public static final String JAVA_GET_MEMORY_OVER_TIME         = "getMemoryOverTime";
+
+        // GC
+        public static final String JAVA_GET_GC_ACTIVITY              = "getGcActivity";
+        public static final String JAVA_GET_GC_BEHAVIOR_OVER_TIME    = "getGcBehaviorOverTime";
+        public static final String JAVA_GET_GC_EFFICIENCY            = "getGcEfficiency";
+
+        // Threads
+        public static final String JAVA_GET_THREAD_STATE             = "getThreadState";
+        public static final String JAVA_GET_THREAD_ACTIVITY_OVER_TIME = "getThreadActivityOverTime";
+
+        // CPU & Resources
+        public static final String JAVA_GET_CPU_USAGE                = "getCpuUsage";
+        public static final String JAVA_GET_SYSTEM_RESOURCES         = "getSystemResources";
+        public static final String JAVA_GET_RESOURCE_USAGE_OVER_TIME = "getResourceUsageOverTime";
+
+        // Application Behavior
+        public static final String JAVA_GET_CLASS_LOADING_STATS      = "getClassLoadingStats";
+        public static final String JAVA_GET_JVM_RUNTIME_INFO         = "getJvmRuntimeInfo";
+
+        // Comparative Analysis
+        public static final String JAVA_GET_CURRENT_VS_BASELINE      = "getCurrentVsBaseline";
+        public static final String JAVA_GET_METRIC_PERCENTILES       = "getMetricPercentiles";
+
+        // Time-Window Investigation
+        public static final String JAVA_GET_INCIDENT_WINDOW_DATA     = "getIncidentWindowData";
+        public static final String JAVA_GET_BEFORE_AFTER_SNAPSHOT    = "getBeforeAfterSnapshot";
+
+        // Correlation Analysis
+        public static final String JAVA_GET_MEMORY_GC_CORRELATION    = "getMemoryGcCorrelation";
+        public static final String JAVA_GET_CPU_GC_CORRELATION       = "getCpuGcCorrelation";
+
+        // Comprehensive Context
+        public static final String JAVA_GET_JVM_HEALTH_CONTEXT       = "getJvmHealthContext";
+        public static final String JAVA_GET_INVESTIGATION_BUNDLE     = "getInvestigationBundle";
+
+        // Advanced RCA
+        public static final String JAVA_GET_MEMORY_ALLOCATION_RATE   = "getMemoryAllocationRate";
+        public static final String JAVA_GET_GC_PRESSURE_ANALYSIS     = "getGcPressureAnalysis";
+        public static final String JAVA_GET_MEMORY_LEAK_INDICATORS   = "getMemoryLeakIndicators";
+        public static final String JAVA_GET_THREAD_CONTENTION_ANALYSIS = "getThreadContentionAnalysis";
+        public static final String JAVA_GET_HEAP_FRAGMENTATION_ANALYSIS = "getHeapFragmentationAnalysis";
     }
 
     /**
@@ -105,6 +164,20 @@ public final class McpConstants {
 
         // Cryostat arguments
         public static final String POD_NAME = "pod_name";
+
+        // Filesystem arguments
+        public static final String PATH = "path";
+
+        // Java JMX MCP arguments
+        public static final String LOOKBACK         = "lookback";
+        public static final String STEP             = "step";
+        public static final String WINDOW           = "window";
+        public static final String BASELINE_TIME    = "baselineTime";
+        public static final String METRIC_CATEGORY  = "metricCategory";
+        public static final String START_TIME       = "startTime";
+        public static final String END_TIME         = "endTime";
+        public static final String EVENT_TIME       = "eventTime";
+        public static final String FOCUS_AREA       = "focusArea";
     }
 
     /**
@@ -237,9 +310,12 @@ public final class McpConstants {
         public static final String HAS_K8S_CONTEXT = "hasK8sContext";
         public static final String HAS_KRUIZE_CONTEXT = "hasKruizeContext";
         public static final String HAS_CRYOSTAT_CONTEXT = "hasCryostatContext";
+        public static final String HAS_FILESYSTEM_CONTEXT = "hasFilesystemContext";
+        public static final String HAS_JAVA_CONTEXT = "hasJavaContext";
         public static final String RETRY_ATTEMPT = "retryAttempt";
         public static final String DELAY_MS = "delayMs";
         public static final String ANALYSIS_TYPE = "analysisType";
+        public static final String PLATFORM = "platform";
     }
 
     /**

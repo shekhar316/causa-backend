@@ -221,5 +221,25 @@ public final class LogMessages {
 
         // Context collection completion
         public static final String MCP_CONTEXT_COLLECTION_COMPLETE = "MCP context collection completed";
+
+        // VM platform routing
+        public static final String MCP_VM_CONTEXT_COLLECTION_START = "VM platform MCP context collection started";
+        public static final String MCP_VM_CONTEXT_COLLECTION_COMPLETE = "VM platform MCP context collection completed";
+        public static final String MCP_PLATFORM_DETECTED = "Deployment platform detected";
+
+        // Filesystem MCP (VM platform)
+        public static final String MCP_FILESYSTEM_DIR_LISTING  = "Filesystem directory listing retrieved";
+        public static final String MCP_FILESYSTEM_FILE_CONTENT = "Filesystem file content retrieved";
+        public static final String MCP_FILESYSTEM_SKIPPED      = "Skipping Filesystem MCP calls - not yet implemented";
+
+        // Java JMX MCP (VM platform)
+        public static final String MCP_JAVA_HEAP_STATUS             = "Java JMX heap status retrieved";
+        public static final String MCP_JAVA_GC_ACTIVITY             = "Java JMX GC activity retrieved";
+        public static final String MCP_JAVA_THREAD_STATE            = "Java JMX thread state retrieved";
+        public static final String MCP_JAVA_GC_PRESSURE             = "Java JMX GC pressure analysis retrieved";
+        public static final String MCP_JAVA_MEMORY_LEAK_INDICATORS  = "Java JMX memory leak indicators retrieved";
+        public static final String MCP_JAVA_THREAD_CONTENTION       = "Java JMX thread contention analysis retrieved";
+        public static final String MCP_JAVA_JVM_RUNTIME_INFO        = "Java JMX JVM runtime info retrieved";
+        public static final String MCP_JAVA_SKIPPED                 = "Skipping Java JMX MCP calls - not yet implemented";
     }
 }

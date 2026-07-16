@@ -38,6 +38,8 @@ public final class Alert {
     private final String podName;
     private final String containerName;
     private final String namespace;
+    private final String platform;
+    private final String workloadName;
     private final AlertStatus prometheusStatus;   // firing / resolved
     private final String processingStatus;        // ACCEPTED / REJECTED / PROCESSING / PROCESSED
     private final boolean hasDiagnostics;
@@ -57,7 +59,9 @@ public final class Alert {
         this.severity         = Objects.requireNonNull(builder.severity, "severity cannot be null");
         this.podName          = builder.podName;
         this.containerName    = builder.containerName;
-        this.namespace        = Objects.requireNonNull(builder.namespace, "namespace cannot be null");
+        this.namespace        = builder.namespace;
+        this.platform         = builder.platform;
+        this.workloadName     = builder.workloadName;
         this.prometheusStatus = builder.prometheusStatus;
         this.processingStatus = builder.processingStatus;
         this.hasDiagnostics   = builder.hasDiagnostics;
@@ -80,6 +84,9 @@ public final class Alert {
     public String getPodName()           { return podName; }
     public String getContainerName()     { return containerName; }
     public String getNamespace()         { return namespace; }
+    public String getPlatform()          { return platform; }
+    /** Workload name — mirrors containerName for cluster; service/process name for VM. */
+    public String getWorkloadName()      { return workloadName; }
 
     /** Prometheus alert lifecycle: {@code firing} or {@code resolved}. */
     public AlertStatus getPrometheusStatus()  { return prometheusStatus; }
@@ -126,6 +133,8 @@ public final class Alert {
         private String podName;
         private String containerName;
         private String namespace;
+        private String platform;
+        private String workloadName;
         private AlertStatus prometheusStatus;
         private String processingStatus;
         private boolean hasDiagnostics = false;
@@ -145,6 +154,8 @@ public final class Alert {
         public Builder podName(String podName)               { this.podName = podName; return this; }
         public Builder containerName(String containerName)   { this.containerName = containerName; return this; }
         public Builder namespace(String namespace)           { this.namespace = namespace; return this; }
+        public Builder platform(String platform)             { this.platform = platform; return this; }
+        public Builder workloadName(String workloadName)     { this.workloadName = workloadName; return this; }
         public Builder prometheusStatus(AlertStatus s)       { this.prometheusStatus = s; return this; }
         public Builder processingStatus(String s)            { this.processingStatus = s; return this; }
         /** @deprecated Use {@link #prometheusStatus(AlertStatus)} */

@@ -3,6 +3,7 @@ package com.causa.core.services.impl;
 import com.causa.common.utils.IdGenerator;
 import com.causa.common.constants.DiagnosticConstants;
 import com.causa.common.constants.DiagnosticConstants.DiagnosticStatus;
+import com.causa.common.constants.DiagnosticConstants.FaultDomain;
 import com.causa.common.constants.JsonParsingConstants;
 import com.causa.common.constants.ContextConstants;
 import com.causa.common.constants.DiagnosticConstants.Fields;
@@ -12,6 +13,7 @@ import com.causa.common.logging.LogMessages;
 import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
 import com.causa.core.domain.Diagnostic;
+import com.causa.core.domain.DiagnosticContext;
 import com.causa.core.domain.LLMRequest;
 import com.causa.core.domain.LLMResponse;
 import com.causa.core.domain.RootCauseAnalysis;
@@ -25,11 +27,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import com.causa.core.domain.DiagnosticContext;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Set;
 
@@ -103,37 +101,33 @@ public class DiagnosticServiceImpl implements DiagnosticService {
             // Step 1: Collect diagnostic context from MCP servers (K8s, Kruize, Cryostat)
             DiagnosticContext diagnosticContext = collectContext(alert);
 
-            log.info(LogMessages.Diagnostic.CONTEXT_COLLECTED)
-                .field(Fields.DIAGNOSTIC_ID, diagnosticId)
-                .field(LogFields.ALERT_ID, alert.getAlertId())
-                .field(LogFields.HAS_K8S_CONTEXT, diagnosticContext.hasKubernetesContext())
-                .field(LogFields.HAS_KRUIZE_CONTEXT, diagnosticContext.hasKruizeContext())
-                .field(LogFields.HAS_CRYOSTAT_CONTEXT, diagnosticContext.hasCryostatContext())
-                .log();
-
             // Step 2: Format context for LLM
             String contextForLLM = diagnosticContext.toString();
-            String separator = ContextConstants.SEPARATOR_CHAR.repeat(ContextConstants.SEPARATOR_LENGTH);
 
-            log.info(ContextConstants.NEWLINE + separator + ContextConstants.NEWLINE +
-                     ContextConstants.CONTEXT_LOG_HEADER + ContextConstants.NEWLINE +
-                     separator + ContextConstants.NEWLINE +
-                     contextForLLM +
-                     separator + ContextConstants.NEWLINE)
+            log.info(LogMessages.Diagnostic.CONTEXT_COLLECTED + ContextConstants.NEWLINE + contextForLLM)
                 .field(Fields.DIAGNOSTIC_ID, diagnosticId)
+                .field(LogFields.ALERT_ID, alert.getAlertId())
                 .log();
 
             // Step 3: Perform root cause analysis using LLM
             RootCauseAnalysis rca = performRootCauseAnalysis(alert, contextForLLM);
 
-            // TODO: Step 4: Validate RCA against collected context
-            // TODO: Step 5: Store RCA result in database
+            // Step 4: Persist RCA with IN_PROGRESS status — validation not yet run
+            Diagnostic withRca = buildRcaDiagnostic(diagnostic, rca);
+            diagnosticRepository.update(withRca);
 
             log.info(LogMessages.Diagnostic.DIAGNOSTIC_COMPLETED)
                 .field("diagnosticId", diagnosticId)
                 .field("alertId", alert.getAlertId())
                 .field("anomalyType", rca.anomalyType())
+                .field("rcaConfidence", rca.llmConfidenceScoreForRca())
+                .field("status", DiagnosticStatus.IN_PROGRESS.getValue())
                 .log();
+
+            // TODO: Step 5: Validate RCA against collected context
+            // When validation framework (rca-validation-impl) is merged, call:
+            //   validateRca(alert, rca, contextForLLM);
+            // and update the diagnostic row to COMPLETED with validation_result.
 
         } catch (Exception e) {
             // LLM / MCP failure — log and continue. The diagnostic row stays with PENDING status.
@@ -289,6 +283,63 @@ public class DiagnosticServiceImpl implements DiagnosticService {
         }
 
         return rca;
+    }
+
+    /**
+     * Builds a {@link Diagnostic} with {@code IN_PROGRESS} status from the pending row
+     * and the freshly-generated {@link RootCauseAnalysis}.
+     *
+     * <p>All RCA fields are populated. {@code validationResult} is left null — it will
+     * be filled in once the validation framework runs (future Step 5).
+     *
+     * @param pending the PENDING diagnostic already saved to DB
+     * @param rca     the LLM-generated root cause analysis
+     * @return new Diagnostic ready to be persisted via {@code diagnosticRepository.update()}
+     */
+    private Diagnostic buildRcaDiagnostic(Diagnostic pending, RootCauseAnalysis rca) {
+        FaultDomain faultDomain = mapAnomalyType(rca.anomalyType());
+
+        // Average of both confidence scores → single legacy float field
+        float avgConfidence = (float) ((rca.llmConfidenceScoreForRca() + rca.llmConfidenceScoreForSolution()) / 2.0);
+
+        // Serialise the full RCA object as the root_cause_summary
+        String rcaJson;
+        try {
+            rcaJson = objectMapper.writeValueAsString(rca);
+        } catch (Exception e) {
+            rcaJson = rca.rootCause();  // fallback to plain-text root cause
+        }
+
+        return Diagnostic.builder()
+            .diagnosticId(pending.getDiagnosticId())
+            .alertId(pending.getAlertId())
+            .generatedAt(pending.getGeneratedAt())
+            .status(DiagnosticStatus.IN_PROGRESS)
+            .faultDomain(faultDomain)
+            .confidenceScore(avgConfidence)
+            .rootCauseAnalysis(rcaJson)
+            .issueTitle(rca.issueTitle())
+            .issueDescription(rca.issueDescription())
+            .modelUsed(appConfig.getLlmConfig().getModelName().orElse(""))
+            .rcaConfidenceScore(rca.llmConfidenceScoreForRca())
+            .solutionConfidenceScore(rca.llmConfidenceScoreForSolution())
+            .confidenceSummary(rca.confidenceSummary())
+            .llmNotes(rca.llmNotes())
+            .build();
+    }
+
+    /**
+     * Maps {@link RootCauseAnalysis.AnomalyType} to {@link FaultDomain}.
+     * Returns {@code null} for {@code HEALTHY} or when type is null.
+     */
+    private static FaultDomain mapAnomalyType(RootCauseAnalysis.AnomalyType anomalyType) {
+        if (anomalyType == null) return null;
+        return switch (anomalyType) {
+            case OOM_KILLED          -> FaultDomain.OOM_KILLED;
+            case POSSIBLE_OOM_KILLED -> FaultDomain.POSSIBLE_OOM_KILLED;
+            case POSSIBLE_GC_PAUSE   -> FaultDomain.POSSIBLE_GC_PAUSE;
+            case HEALTHY             -> null;
+        };
     }
 
     /**

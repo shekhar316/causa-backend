@@ -316,41 +316,22 @@ CREATE INDEX IF NOT EXISTS idx_skills_active ON skills_configurations (is_active
 
 
 -- =============================================================================
--- PG LISTEN/NOTIFY for Entity Cache Invalidation
+-- PG LISTEN/NOTIFY Triggers for Entity Cache Invalidation
 -- =============================================================================
 
--- Notify function: broadcasts entity cache invalidation events
-CREATE OR REPLACE FUNCTION notify_entity_change() RETURNS trigger AS $$
-DECLARE
-    entity_type TEXT;
-BEGIN
-    -- Determine entity type from table name
-    CASE TG_TABLE_NAME
-        WHEN 'auth_configurations' THEN entity_type := 'auth';
-        WHEN 'llm_configurations' THEN entity_type := 'llm_provider';
-        WHEN 'mcp_configurations' THEN entity_type := 'mcp_server';
-        WHEN 'skills_configurations' THEN entity_type := 'skill';
-        ELSE entity_type := 'unknown';
-    END CASE;
-
-    PERFORM pg_notify('entity_cache_channel', entity_type);
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Triggers for entity cache invalidation
+-- Reuse the existing notify_config_change() function for entity tables
 CREATE TRIGGER trg_auth_notify
     AFTER INSERT OR UPDATE OR DELETE ON auth_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();
 
 CREATE TRIGGER trg_llm_notify
     AFTER INSERT OR UPDATE OR DELETE ON llm_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();
 
 CREATE TRIGGER trg_mcp_notify
     AFTER INSERT OR UPDATE OR DELETE ON mcp_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();
 
 CREATE TRIGGER trg_skills_notify
     AFTER INSERT OR UPDATE OR DELETE ON skills_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();

@@ -2,6 +2,14 @@ package com.causa.infrastructure.persistence;
 
 import com.causa.common.constants.AppConstants;
 import com.causa.common.logging.CausaLogger;
+import com.causa.config.AuthConfigCache;
+import com.causa.config.LlmProviderConfigCache;
+import com.causa.config.McpServerConfigCache;
+import com.causa.config.SkillConfigCache;
+import com.causa.core.ports.AuthConfigurationRepository;
+import com.causa.core.ports.LlmConfigurationRepository;
+import com.causa.core.ports.McpConfigurationRepository;
+import com.causa.core.ports.SkillConfigurationRepository;
 import com.causa.core.services.ConfigService;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
@@ -53,6 +61,14 @@ public class ConfigCacheListener {
     private static final int RECONNECT_DELAY_MS = 5000;
 
     private final ConfigService configService;
+    private final AuthConfigCache authConfigCache;
+    private final LlmProviderConfigCache llmProviderConfigCache;
+    private final McpServerConfigCache mcpServerConfigCache;
+    private final SkillConfigCache skillConfigCache;
+    private final AuthConfigurationRepository authRepository;
+    private final LlmConfigurationRepository llmRepository;
+    private final McpConfigurationRepository mcpRepository;
+    private final SkillConfigurationRepository skillRepository;
     private final String jdbcUrl;
     private final String jdbcUser;
     private final String jdbcPassword;
@@ -62,8 +78,27 @@ public class ConfigCacheListener {
     private volatile boolean running = false;
 
     @Inject
-    public ConfigCacheListener(ConfigService configService, Config mpConfig) {
+    public ConfigCacheListener(
+        ConfigService configService,
+        AuthConfigCache authConfigCache,
+        LlmProviderConfigCache llmProviderConfigCache,
+        McpServerConfigCache mcpServerConfigCache,
+        SkillConfigCache skillConfigCache,
+        AuthConfigurationRepository authRepository,
+        LlmConfigurationRepository llmRepository,
+        McpConfigurationRepository mcpRepository,
+        SkillConfigurationRepository skillRepository,
+        Config mpConfig
+    ) {
         this.configService = configService;
+        this.authConfigCache = authConfigCache;
+        this.llmProviderConfigCache = llmProviderConfigCache;
+        this.mcpServerConfigCache = mcpServerConfigCache;
+        this.skillConfigCache = skillConfigCache;
+        this.authRepository = authRepository;
+        this.llmRepository = llmRepository;
+        this.mcpRepository = mcpRepository;
+        this.skillRepository = skillRepository;
         this.jdbcUrl = mpConfig.getValue("quarkus.datasource.jdbc.url", String.class);
         this.jdbcUser = mpConfig.getValue("quarkus.datasource.username", String.class);
         this.jdbcPassword = mpConfig.getValue("quarkus.datasource.password", String.class);
@@ -135,9 +170,10 @@ public class ConfigCacheListener {
                                 .field("payload", notification.getParameter())
                                 .log();
 
-                            // Reload cache — errors here must NOT break the LISTEN connection
+                            // Reload all caches — errors here must NOT break the LISTEN connection
                             try {
                                 configService.refreshCache();
+                                refreshEntityCaches();
                             } catch (Exception refreshEx) {
                                 log.warn("Cache refresh failed after config notification")
                                     .field("error", refreshEx.getClass().getSimpleName())
@@ -178,5 +214,33 @@ public class ConfigCacheListener {
         }
 
         log.info("PG config listener stopped").log();
+    }
+
+    /**
+     * Refreshes all entity caches by reloading from the database.
+     */
+    private void refreshEntityCaches() {
+        // Refresh Auth cache
+        authConfigCache.clear();
+        authRepository.findAll().forEach(entity -> authConfigCache.put(entity.getId(), entity));
+
+        // Refresh LLM Provider cache
+        llmProviderConfigCache.clear();
+        llmRepository.findAll().forEach(entity -> llmProviderConfigCache.put(entity.getId(), entity));
+
+        // Refresh MCP Server cache
+        mcpServerConfigCache.clear();
+        mcpRepository.findAll().forEach(entity -> mcpServerConfigCache.put(entity.getId(), entity));
+
+        // Refresh Skill cache
+        skillConfigCache.clear();
+        skillRepository.findAll().forEach(entity -> skillConfigCache.put(entity.getId(), entity));
+
+        log.info("Entity caches refreshed")
+            .field("auth_count", authConfigCache.size())
+            .field("llm_count", llmProviderConfigCache.size())
+            .field("mcp_count", mcpServerConfigCache.size())
+            .field("skill_count", skillConfigCache.size())
+            .log();
     }
 }

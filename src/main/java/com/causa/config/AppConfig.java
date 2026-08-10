@@ -1,12 +1,7 @@
 package com.causa.config;
 
-import com.causa.infrastructure.persistence.entity.AuthConfigurationEntity;
-import com.causa.infrastructure.persistence.entity.LlmConfigurationEntity;
-import com.causa.infrastructure.persistence.entity.McpConfigurationEntity;
-import com.causa.infrastructure.persistence.entity.SkillConfigurationEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,8 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link ConcurrentHashMap}. Values are loaded from the database at startup and
  * synchronized across all pods via PostgreSQL LISTEN/NOTIFY.
  *
- * <p>This cache includes both legacy key-value configurations and new entity-based
- * configurations (LLM, MCP, Auth, Skills).
+ * <p>This cache is the fast-access layer for typed configuration snapshots.
+ * Database writes trigger invalidation events that reload this cache on all pods.
  *
  * <p>Thread-safe for concurrent reads and writes.
  *
@@ -29,15 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AppConfig {
 
     private final ConcurrentHashMap<String, String> cache = new ConcurrentHashMap<>();
-
-    // Entity caches
-    private final ConcurrentHashMap<String, AuthConfigurationEntity> authCache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, LlmConfigurationEntity> llmCache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, McpConfigurationEntity> mcpCache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, SkillConfigurationEntity> skillCache = new ConcurrentHashMap<>();
-
-    // Active LLM provider ID (only one can be active)
-    private volatile String activeLlmId;
 
     /**
      * Retrieves a configuration value by key.

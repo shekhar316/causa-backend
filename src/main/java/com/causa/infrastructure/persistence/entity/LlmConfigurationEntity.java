@@ -1,8 +1,9 @@
 package com.causa.infrastructure.persistence.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * LLM Configuration JPA Entity — maps to the {@code llm_configurations} table.
@@ -40,9 +41,9 @@ public class LlmConfigurationEntity extends BaseEntity {
     private String authId;
 
     /** Runtime configuration (temperature, max_tokens, timeout, skills config, etc.). */
-    @Type(JsonBinaryType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
-    private String settings;
+    private JsonNode settings;
 
     /** Only one provider should be active at a time. */
     @Column(nullable = false)
@@ -67,8 +68,8 @@ public class LlmConfigurationEntity extends BaseEntity {
     public String getAuthId() { return authId; }
     public void setAuthId(String authId) { this.authId = authId; }
 
-    public String getSettings() { return settings; }
-    public void setSettings(String settings) { this.settings = settings; }
+    public JsonNode getSettings() { return settings; }
+    public void setSettings(JsonNode settings) { this.settings = settings; }
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

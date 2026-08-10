@@ -1,0 +1,26 @@
+mcp-servers:
+  - name: kubernetes
+    url: http://kubernetes-mcp-server:8080
+    health-url: /healthz
+    active: true
+    auth: null
+    settings:
+      timeout_ms: 5000
+      retries: 3
+      platform: kubernetes
+    tools:
+      - pods_get
+      - pods_log
+      - events_list
+
+  - name: kruize
+    url: http://kruize-mcp-server-service:8080
+    health-url: /q/health/ready
+    active: true
+    auth: null
+    settings:
+      timeout_ms: 10000
+      retries: 2
+    tools:
+      - getCostOptimizedRecommendations
+      - getPerformanceOptimizedRecommendations

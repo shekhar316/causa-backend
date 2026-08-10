@@ -101,6 +101,11 @@ causa:
   encryption:
     key: ${CAUSA_ENCRYPTION_KEY:Y2F1c2EtZGV2LWluc2VjdXJlLWRvLW5vdC11c2UtcHI=}
 
+  # Entity Configuration - YAML file paths for LLM and MCP configurations
+  config:
+    llm-config-path: ${CAUSA_LLM_CONFIG_PATH:classpath:config/llm-providers.yaml}
+    mcp-config-path: ${CAUSA_MCP_CONFIG_PATH:classpath:config/mcp-servers.yaml}
+
   # Cluster identity — used in Diagnostics API responses
   cluster:
     name: ${CAUSA_CLUSTER_NAME:default}

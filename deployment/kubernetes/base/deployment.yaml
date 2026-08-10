@@ -36,6 +36,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        # YAML config file paths - point to mounted ConfigMaps
+        - name: CAUSA_LLM_CONFIG_PATH
+          value: /etc/causa/config/llm-providers.yaml
+        - name: CAUSA_MCP_CONFIG_PATH
+          value: /etc/causa/config/mcp-servers.yaml
         envFrom:
         # Public configuration (non-sensitive)
         # Loads ALL keys from ConfigMap as environment variables
@@ -49,6 +54,17 @@ spec:
         - secretRef:
             name: causa-db-secrets
             optional: false
+        volumeMounts:
+        # Mount LLM providers YAML config
+        - name: llm-providers-config
+          mountPath: /etc/causa/config/llm-providers.yaml
+          subPath: llm-providers.yaml
+          readOnly: true
+        # Mount MCP servers YAML config
+        - name: mcp-servers-config
+          mountPath: /etc/causa/config/mcp-servers.yaml
+          subPath: mcp-servers.yaml
+          readOnly: true
         resources:
           requests:
             cpu: 250m
@@ -76,3 +92,18 @@ spec:
           timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 5
+      volumes:
+      # LLM providers config from ConfigMap
+      - name: llm-providers-config
+        configMap:
+          name: causa-llm-providers-config
+          items:
+          - key: llm-providers.yaml
+            path: llm-providers.yaml
+      # MCP servers config from ConfigMap
+      - name: mcp-servers-config
+        configMap:
+          name: causa-mcp-servers-config
+          items:
+          - key: mcp-servers.yaml
+            path: mcp-servers.yaml

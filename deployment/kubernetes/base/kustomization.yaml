@@ -8,6 +8,8 @@ labels:
 resources:
   - serviceaccount.yaml
   - configmap.yaml
+  - configmap-llm-providers.yaml
+  - configmap-mcp-servers.yaml
   - deployment.yaml
   - service.yaml
 

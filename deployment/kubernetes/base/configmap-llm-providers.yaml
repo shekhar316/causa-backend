@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: causa-llm-providers-config
+  labels:
+    app: causa-backend
+    component: config
+data:
+  llm-providers.yaml: |
+    llm-providers:
+      - name: anthropic-direct
+        provider: anthropic
+        model: claude-sonnet-4-6
+        active: true
+        auth:
+          type: API_KEY
+          config:
+            api_key: sk-ant-replace-me
+            header_name: x-api-key
+        settings:
+          temperature: 0.1
+          max_tokens: 8192
+          timeout_seconds: 180
+          chat_memory_size: 10
+          skills_enabled: false
+          skills_dir: ""
+
+      - name: vertex-anthropic
+        provider: vertex-ai-anthropic
+        model: claude-sonnet-4-6
+        active: false
+        auth:
+          type: ADC
+          config:
+            project_id: my-gcp-project-id
+            location: us-east5
+            credentials_path: /var/secrets/google/adc.json
+        settings:
+          temperature: 0.1
+          max_tokens: 8192
+          timeout_seconds: 180
+          chat_memory_size: 10
+          skills_enabled: false
+          skills_dir: ""
+
+      - name: internal-bob
+        provider: bob
+        model: bob
+        active: false
+        auth:
+          type: API_KEY
+          config:
+            api_key: bob-api-key-replace-me
+            header_name: x-api-key
+        settings:
+          temperature: 0.1
+          max_tokens: 8192
+          timeout_seconds: 180
+          chat_memory_size: 10
+          shell_path: bob
+          skills_enabled: false
+          skills_dir: ""

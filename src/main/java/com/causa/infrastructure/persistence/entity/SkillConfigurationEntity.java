@@ -1,8 +1,9 @@
 package com.causa.infrastructure.persistence.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Skill Configuration JPA Entity — maps to the {@code skills_configurations} table.
@@ -44,9 +45,9 @@ public class SkillConfigurationEntity extends BaseEntity {
     private String content;
 
     /** Optional structured metadata (description, tags, configuration). */
-    @Type(JsonBinaryType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String metadata;
+    private JsonNode metadata;
 
     /** Active by default. */
     @Column(nullable = false)
@@ -74,8 +75,8 @@ public class SkillConfigurationEntity extends BaseEntity {
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
-    public String getMetadata() { return metadata; }
-    public void setMetadata(String metadata) { this.metadata = metadata; }
+    public JsonNode getMetadata() { return metadata; }
+    public void setMetadata(JsonNode metadata) { this.metadata = metadata; }
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

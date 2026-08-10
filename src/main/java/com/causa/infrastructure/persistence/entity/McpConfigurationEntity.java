@@ -1,8 +1,9 @@
 package com.causa.infrastructure.persistence.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * MCP Configuration JPA Entity — maps to the {@code mcp_configurations} table.
@@ -36,18 +37,18 @@ public class McpConfigurationEntity extends BaseEntity {
     private String healthUrl;
 
     /** Array of available tool names (e.g. {@code ["pods_get", "pods_log"]}). */
-    @Type(JsonBinaryType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
-    private String tools;
+    private JsonNode tools;
 
     /** Foreign key to {@code auth_configurations}; nullable. */
     @Column(length = 21)
     private String authId;
 
     /** Server-specific configuration (timeout_ms, retry config, platform, etc.). */
-    @Type(JsonBinaryType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
-    private String settings;
+    private JsonNode settings;
 
     /** Active by default. */
     @Column(nullable = false)
@@ -69,14 +70,14 @@ public class McpConfigurationEntity extends BaseEntity {
     public String getHealthUrl() { return healthUrl; }
     public void setHealthUrl(String healthUrl) { this.healthUrl = healthUrl; }
 
-    public String getTools() { return tools; }
-    public void setTools(String tools) { this.tools = tools; }
+    public JsonNode getTools() { return tools; }
+    public void setTools(JsonNode tools) { this.tools = tools; }
 
     public String getAuthId() { return authId; }
     public void setAuthId(String authId) { this.authId = authId; }
 
-    public String getSettings() { return settings; }
-    public void setSettings(String settings) { this.settings = settings; }
+    public JsonNode getSettings() { return settings; }
+    public void setSettings(JsonNode settings) { this.settings = settings; }
 
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

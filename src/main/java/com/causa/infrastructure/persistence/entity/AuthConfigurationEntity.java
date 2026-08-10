@@ -1,8 +1,9 @@
 package com.causa.infrastructure.persistence.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Auth Configuration JPA Entity — maps to the {@code auth_configurations} table.
@@ -32,9 +33,9 @@ public class AuthConfigurationEntity extends BaseEntity {
     private String type;
 
     /** Auth-type-specific configuration with field-level encryption. */
-    @Type(JsonBinaryType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
-    private String config;
+    private JsonNode config;
 
     // -------------------------------------------------------------------------
     // Getters and Setters
@@ -49,6 +50,6 @@ public class AuthConfigurationEntity extends BaseEntity {
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
 
-    public String getConfig() { return config; }
-    public void setConfig(String config) { this.config = config; }
+    public JsonNode getConfig() { return config; }
+    public void setConfig(JsonNode config) { this.config = config; }
 }

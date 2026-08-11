@@ -1,5 +1,6 @@
 package com.causa.infrastructure.persistence.entity;
 
+import com.causa.common.constants.ConfigConstants.SkillSourceType;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -32,9 +33,10 @@ public class SkillConfigurationEntity extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String name;
 
-    /** Skill source: INLINE, PATH, or URL. */
+    /** Skill source — see {@link ConfigConstants.SkillSourceType} for valid values. */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
-    private String sourceType;
+    private SkillSourceType sourceType;
 
     /** File path or remote URL; nullable for INLINE skills. */
     @Column(columnDefinition = "TEXT")
@@ -66,8 +68,8 @@ public class SkillConfigurationEntity extends BaseEntity {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getSourceType() { return sourceType; }
-    public void setSourceType(String sourceType) { this.sourceType = sourceType; }
+    public SkillSourceType getSourceType() { return sourceType; }
+    public void setSourceType(SkillSourceType sourceType) { this.sourceType = sourceType; }
 
     public String getUri() { return uri; }
     public void setUri(String uri) { this.uri = uri; }

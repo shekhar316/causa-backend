@@ -1,5 +1,6 @@
 package com.causa.infrastructure.persistence.entity;
 
+import com.causa.common.constants.ConfigConstants.AuthType;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -28,9 +29,10 @@ public class AuthConfigurationEntity extends BaseEntity {
     @Column(nullable = false, length = 255, unique = true)
     private String name;
 
-    /** Authentication type: API_KEY, BEARER_TOKEN, ADC, NONE. */
+    /** Authentication type — see {@link ConfigConstants.AuthType} for valid values. */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
-    private String type;
+    private AuthType type;
 
     /** Auth-type-specific configuration with field-level encryption. */
     @JdbcTypeCode(SqlTypes.JSON)
@@ -47,8 +49,8 @@ public class AuthConfigurationEntity extends BaseEntity {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
+    public AuthType getType() { return type; }
+    public void setType(AuthType type) { this.type = type; }
 
     public JsonNode getConfig() { return config; }
     public void setConfig(JsonNode config) { this.config = config; }

@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS integrations (
     id              VARCHAR(21)  NOT NULL,
     target_platform VARCHAR(64)  NOT NULL,   -- JIRA, SLACK, DATADOG, GITHUB
     target_details  JSONB        NOT NULL,
-    is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
+    active          BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS llm_configurations (
     model      VARCHAR(255)             NOT NULL,
     auth_id    VARCHAR(21),                         -- FK to auth_configurations, nullable
     settings   JSONB                    NOT NULL,   -- temperature, max_tokens, timeout, skills config
-    is_active  BOOLEAN                  NOT NULL DEFAULT FALSE,
+    active     BOOLEAN                  NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS llm_configurations (
 );
 
 CREATE INDEX IF NOT EXISTS idx_llm_provider ON llm_configurations (provider);
-CREATE INDEX IF NOT EXISTS idx_llm_active ON llm_configurations (is_active);
+CREATE INDEX IF NOT EXISTS idx_llm_active ON llm_configurations (active);
 
 
 -- =============================================================================
@@ -278,7 +278,7 @@ CREATE TABLE IF NOT EXISTS mcp_configurations (
     tools      JSONB                    NOT NULL,   -- Array of tool names
     auth_id    VARCHAR(21),                         -- FK to auth_configurations, nullable
     settings   JSONB                    NOT NULL,   -- timeout_ms, retry config, platform
-    is_active  BOOLEAN                  NOT NULL DEFAULT TRUE,
+    active     BOOLEAN                  NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -287,7 +287,7 @@ CREATE TABLE IF NOT EXISTS mcp_configurations (
     CONSTRAINT fk_mcp_auth FOREIGN KEY (auth_id) REFERENCES auth_configurations (id) ON DELETE SET NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_mcp_active ON mcp_configurations (is_active);
+CREATE INDEX IF NOT EXISTS idx_mcp_active ON mcp_configurations (active);
 
 
 -- =============================================================================
@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS skills_configurations (
     uri                   TEXT,                                -- Path or URL, nullable for INLINE
     content               TEXT,                                -- Markdown content for INLINE
     metadata              JSONB,
-    is_active             BOOLEAN                  NOT NULL DEFAULT TRUE,
+    active                BOOLEAN                  NOT NULL DEFAULT TRUE,
     created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS skills_configurations (
 );
 
 CREATE INDEX IF NOT EXISTS idx_skills_mcp ON skills_configurations (mcp_configuration_id);
-CREATE INDEX IF NOT EXISTS idx_skills_active ON skills_configurations (is_active);
+CREATE INDEX IF NOT EXISTS idx_skills_active ON skills_configurations (active);
 
 
 -- Triggers for entity cache invalidation (reuse notify_config_change → config_cache_channel)

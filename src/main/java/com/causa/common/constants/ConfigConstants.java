@@ -230,9 +230,6 @@ public final class ConfigConstants {
      *
      * <p>Persisted as a string ({@code @Enumerated(EnumType.STRING)}) in
      * {@code auth_configurations.type} (max length 32).
-     *
-     * <p>{@link #UNKNOWN} is a forward-compatibility fallback for values not yet modelled
-     * here and must never be set explicitly by application code.
      */
     public enum AuthType {
         /** Static API key passed as a request header (e.g. {@code x-api-key}). */

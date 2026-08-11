@@ -188,7 +188,7 @@ public class ChatModelFactory {
 
         GoogleCredentials credentials;
         try {
-            byte[] jsonBytes = Base64.getDecoder().decode(adcBase64);
+            byte[] jsonBytes = Base64.getDecoder().decode(adcBase64.replaceAll("\\s", ""));
             credentials = GoogleCredentials.fromStream(new ByteArrayInputStream(jsonBytes));
         } catch (IllegalArgumentException e) {
             throw new LLMException(

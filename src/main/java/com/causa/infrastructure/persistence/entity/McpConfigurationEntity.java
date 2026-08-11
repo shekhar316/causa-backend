@@ -52,7 +52,7 @@ public class McpConfigurationEntity extends BaseEntity {
 
     /** Active by default. */
     @Column(nullable = false)
-    private Boolean isActive = true;
+    private Boolean active = true;
 
     // -------------------------------------------------------------------------
     // Getters and Setters
@@ -79,6 +79,6 @@ public class McpConfigurationEntity extends BaseEntity {
     public JsonNode getSettings() { return settings; }
     public void setSettings(JsonNode settings) { this.settings = settings; }
 
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
 }

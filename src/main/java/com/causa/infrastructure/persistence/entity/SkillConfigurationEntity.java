@@ -53,7 +53,7 @@ public class SkillConfigurationEntity extends BaseEntity {
 
     /** Active by default. */
     @Column(nullable = false)
-    private Boolean isActive = true;
+    private Boolean active = true;
 
     // -------------------------------------------------------------------------
     // Getters and Setters
@@ -80,6 +80,6 @@ public class SkillConfigurationEntity extends BaseEntity {
     public JsonNode getMetadata() { return metadata; }
     public void setMetadata(JsonNode metadata) { this.metadata = metadata; }
 
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
 }

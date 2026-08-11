@@ -47,7 +47,7 @@ public class LlmConfigurationEntity extends BaseEntity {
 
     /** Only one provider should be active at a time. */
     @Column(nullable = false)
-    private Boolean isActive = false;
+    private Boolean active = false;
 
     // -------------------------------------------------------------------------
     // Getters and Setters
@@ -71,6 +71,6 @@ public class LlmConfigurationEntity extends BaseEntity {
     public JsonNode getSettings() { return settings; }
     public void setSettings(JsonNode settings) { this.settings = settings; }
 
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
 }

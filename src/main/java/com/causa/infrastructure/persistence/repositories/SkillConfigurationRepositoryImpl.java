@@ -36,7 +36,7 @@ public class SkillConfigurationRepositoryImpl implements SkillConfigurationRepos
     @Transactional(Transactional.TxType.SUPPORTS)
     public List<SkillConfigurationEntity> findActiveByMcpConfigurationId(String mcpConfigurationId) {
         return SkillConfigurationEntity.<SkillConfigurationEntity>find(
-            "mcpConfigurationId = ?1 and isActive = ?2",
+            "mcpConfigurationId = ?1 and active = ?2",
             mcpConfigurationId,
             true
         ).list();

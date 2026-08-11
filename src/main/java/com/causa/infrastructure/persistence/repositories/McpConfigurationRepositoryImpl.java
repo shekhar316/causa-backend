@@ -35,7 +35,7 @@ public class McpConfigurationRepositoryImpl implements McpConfigurationRepositor
     @Override
     @Transactional(Transactional.TxType.SUPPORTS)
     public List<McpConfigurationEntity> findAllActive() {
-        return McpConfigurationEntity.<McpConfigurationEntity>find("isActive", true)
+        return McpConfigurationEntity.<McpConfigurationEntity>find("active", true)
             .list();
     }
 

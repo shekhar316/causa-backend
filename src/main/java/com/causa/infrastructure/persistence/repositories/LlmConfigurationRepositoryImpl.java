@@ -35,7 +35,7 @@ public class LlmConfigurationRepositoryImpl implements LlmConfigurationRepositor
     @Override
     @Transactional(Transactional.TxType.SUPPORTS)
     public Optional<LlmConfigurationEntity> findActive() {
-        return LlmConfigurationEntity.<LlmConfigurationEntity>find("isActive", true)
+        return LlmConfigurationEntity.<LlmConfigurationEntity>find("active", true)
             .firstResultOptional();
     }
 
@@ -60,6 +60,6 @@ public class LlmConfigurationRepositoryImpl implements LlmConfigurationRepositor
     @Override
     @Transactional
     public void deactivateAll() {
-        LlmConfigurationEntity.update("isActive = false where isActive = true");
+        LlmConfigurationEntity.update("active = false where active = true");
     }
 }

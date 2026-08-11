@@ -206,10 +206,10 @@ CREATE INDEX IF NOT EXISTS idx_health_cleanup ON health_checks (created_at);
 -- PG LISTEN/NOTIFY for Distributed Config Cache Invalidation
 -- =============================================================================
 
--- Notify function: broadcasts cache invalidation events
+-- Notify function: broadcasts cache invalidation events on config_cache_channel
 CREATE OR REPLACE FUNCTION notify_config_change() RETURNS trigger AS $$
 BEGIN
-    PERFORM pg_notify('config_cache_channel', 'reload');
+    PERFORM pg_notify('config_cache_channel', TG_TABLE_NAME);
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
@@ -315,42 +315,19 @@ CREATE INDEX IF NOT EXISTS idx_skills_mcp ON skills_configurations (mcp_configur
 CREATE INDEX IF NOT EXISTS idx_skills_active ON skills_configurations (is_active);
 
 
--- =============================================================================
--- PG LISTEN/NOTIFY for Entity Cache Invalidation
--- =============================================================================
-
--- Notify function: broadcasts entity cache invalidation events
-CREATE OR REPLACE FUNCTION notify_entity_change() RETURNS trigger AS $$
-DECLARE
-    entity_type TEXT;
-BEGIN
-    -- Determine entity type from table name
-    CASE TG_TABLE_NAME
-        WHEN 'auth_configurations' THEN entity_type := 'auth';
-        WHEN 'llm_configurations' THEN entity_type := 'llm_provider';
-        WHEN 'mcp_configurations' THEN entity_type := 'mcp_server';
-        WHEN 'skills_configurations' THEN entity_type := 'skill';
-        ELSE entity_type := 'unknown';
-    END CASE;
-
-    PERFORM pg_notify('entity_cache_channel', entity_type);
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Triggers for entity cache invalidation
+-- Triggers for entity cache invalidation (reuse notify_config_change → config_cache_channel)
 CREATE TRIGGER trg_auth_notify
     AFTER INSERT OR UPDATE OR DELETE ON auth_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();
 
 CREATE TRIGGER trg_llm_notify
     AFTER INSERT OR UPDATE OR DELETE ON llm_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();
 
 CREATE TRIGGER trg_mcp_notify
     AFTER INSERT OR UPDATE OR DELETE ON mcp_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();
 
 CREATE TRIGGER trg_skills_notify
     AFTER INSERT OR UPDATE OR DELETE ON skills_configurations
-    FOR EACH STATEMENT EXECUTE FUNCTION notify_entity_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION notify_config_change();

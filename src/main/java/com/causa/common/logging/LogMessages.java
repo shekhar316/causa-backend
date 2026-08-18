@@ -181,6 +181,11 @@ public final class LogMessages {
         public static final String DIAGNOSTIC_GET_REQUEST    = "GET /api/v1/diagnostics/{id} request received";
         public static final String DIAGNOSTIC_GET_FOUND      = "Diagnostic retrieved successfully";
         public static final String DIAGNOSTIC_GET_NOT_FOUND  = "Diagnostic not found";
+
+        // Manual trigger API
+        public static final String DIAGNOSTIC_TRIGGER_REQUEST  = "POST /api/v1/diagnostics manual trigger request received";
+        public static final String DIAGNOSTIC_TRIGGER_ACCEPTED = "Manual diagnostic trigger accepted";
+        public static final String DIAGNOSTIC_TRIGGER_INVALID  = "Manual diagnostic trigger request validation failed";
     }
 
     /**

@@ -318,6 +318,54 @@ class AlertWebhookValidatorTest {
 
             assertTrue(errors.stream().noneMatch(e -> e.contains("container")));
         }
+
+        @Test
+        @DisplayName("Should pass when workload_name exists only in annotations (vm platform)")
+        void shouldPassWhenWorkloadNameFromAnnotations() {
+            AlertWebhookRequest req = buildValidVmRequest();
+            req.getAlerts().get(0).setLabels(Map.of("alertname", "Test"));
+            req.getAlerts().get(0).setAnnotations(Map.of("workload_name", "my-workload"));
+
+            List<String> errors = vmValidator.validate(req);
+
+            assertTrue(errors.isEmpty());
+        }
+
+        @Test
+        @DisplayName("Should pass when workload_name absent from annotations but present as label (vm platform)")
+        void shouldPassWhenWorkloadNameFromLabel() {
+            AlertWebhookRequest req = buildValidVmRequest();
+            req.getAlerts().get(0).setLabels(Map.of("alertname", "Test", "workload_name", "my-workload"));
+            req.getAlerts().get(0).setAnnotations(Map.of("other_key", "value"));
+
+            List<String> errors = vmValidator.validate(req);
+
+            assertTrue(errors.isEmpty());
+        }
+
+        @Test
+        @DisplayName("Should return error when workload_name missing from both annotations and labels (vm platform)")
+        void shouldReturnErrorWhenWorkloadNameMissingFromBoth() {
+            AlertWebhookRequest req = buildValidVmRequest();
+            req.getAlerts().get(0).setLabels(Map.of("alertname", "Test"));
+            req.getAlerts().get(0).setAnnotations(Map.of("other_key", "value"));
+
+            List<String> errors = vmValidator.validate(req);
+
+            assertTrue(errors.stream().anyMatch(e -> e.contains("workload_name")));
+        }
+
+        @Test
+        @DisplayName("Should return error when workload_name is blank in annotations (vm platform)")
+        void shouldReturnErrorWhenWorkloadNameIsBlank() {
+            AlertWebhookRequest req = buildValidVmRequest();
+            req.getAlerts().get(0).setLabels(Map.of("alertname", "Test"));
+            req.getAlerts().get(0).setAnnotations(Map.of("workload_name", "  "));
+
+            List<String> errors = vmValidator.validate(req);
+
+            assertTrue(errors.stream().anyMatch(e -> e.contains("workload_name")));
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 package com.causa.api.mappers;
 
 import com.causa.api.dto.request.AlertWebhookRequest;
+import com.causa.api.validators.AlertWebhookValidator;
 import com.causa.common.constants.AlertConstants;
 import com.causa.common.constants.AlertConstants.AlertSeverity;
 import com.causa.common.constants.AlertConstants.AlertStatus;
@@ -75,14 +76,18 @@ public class AlertMapper {
 
         // Workload fields — annotations first (PrometheusRule uses container_name / pod_name as annotation
         // keys), label keys (container / pod) used as fallback for older or custom alert sources.
-        String containerName = getAnnotationOrLabel(annotations, labels,
+        String containerName = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
             AlertConstants.Labels.CONTAINER_NAME, AlertConstants.Labels.CONTAINER);
-        String podName       = getAnnotationOrLabel(annotations, labels,
+        String podName       = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
             AlertConstants.Labels.POD_NAME, AlertConstants.Labels.POD);
-        String namespace     = getAnnotationOrLabel(annotations, labels, AlertConstants.Labels.NAMESPACE,    AlertConstants.Labels.NAMESPACE);
-        String clusterName   = getAnnotationOrLabel(annotations, labels, AlertConstants.Labels.CLUSTER_NAME, AlertConstants.Labels.CLUSTER_NAME);
-        String workloadType  = getAnnotationOrLabel(annotations, labels, AlertConstants.Labels.WORKLOAD_TYPE, AlertConstants.Labels.WORKLOAD_TYPE);
-        String workloadName  = getAnnotationOrLabel(annotations, labels, AlertConstants.Labels.WORKLOAD_NAME, AlertConstants.Labels.WORKLOAD_NAME);
+        String namespace     = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
+            AlertConstants.Labels.NAMESPACE,    AlertConstants.Labels.NAMESPACE);
+        String clusterName   = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
+            AlertConstants.Labels.CLUSTER_NAME, AlertConstants.Labels.CLUSTER_NAME);
+        String workloadType  = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
+            AlertConstants.Labels.WORKLOAD_TYPE, AlertConstants.Labels.WORKLOAD_TYPE);
+        String workloadName  = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
+            AlertConstants.Labels.WORKLOAD_NAME, AlertConstants.Labels.WORKLOAD_NAME);
 
         // alert_source — from annotations, default to "prometheus"
         String alertSource = annotations.getOrDefault(
@@ -108,16 +113,6 @@ public class AlertMapper {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
-
-    /**
-     * Looks up {@code annotationKey} in annotations first, then {@code labelKey} in labels.
-     * Pass the same key for both params when the key is identical in both maps.
-     */
-    private String getAnnotationOrLabel(Map<String, String> annotations, Map<String, String> labels,
-                                        String annotationKey, String labelKey) {
-        String value = annotations.get(annotationKey);
-        return value != null ? value : labels.get(labelKey);
-    }
 
     private Instant parseTimestamp(String iso) {
         if (iso == null || iso.isBlank()) return Instant.now();

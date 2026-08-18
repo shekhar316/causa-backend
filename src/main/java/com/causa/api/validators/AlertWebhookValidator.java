@@ -9,6 +9,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Alert Webhook Validator
@@ -98,24 +99,64 @@ public class AlertWebhookValidator {
                 + AlertConstants.Labels.ALERT_NAME + "'");
         }
 
+        Map<String, String> annotations = item.getAnnotations();
+        Map<String, String> labels      = item.getLabels();
+
         if ("vm".equals(platform)) {
-            // VM platform — require workload_name in annotations
-            if (item.getAnnotations() == null
-                    || !item.getAnnotations().containsKey(AlertConstants.Labels.WORKLOAD_NAME)) {
-                errors.add("alerts[" + index + "].annotations must contain '"
-                    + AlertConstants.Labels.WORKLOAD_NAME + "'");
+            // VM platform — require workload_name (annotation first, label fallback, non-blank)
+            String workloadName = getAnnotationOrLabel(annotations, labels,
+                    AlertConstants.Labels.WORKLOAD_NAME, AlertConstants.Labels.WORKLOAD_NAME);
+            if (workloadName == null || workloadName.isBlank()) {
+                errors.add("alerts[" + index + "] must contain non-blank '"
+                    + AlertConstants.Labels.WORKLOAD_NAME + "' in annotations or labels");
             }
         } else {
-            // Cluster platform — require container and namespace in labels
-            if (!item.getLabels().containsKey(AlertConstants.Labels.CONTAINER)) {
-                errors.add("alerts[" + index + "].labels must contain '"
-                    + AlertConstants.Labels.CONTAINER + "'");
+            // Cluster platform — require container, namespace, and pod_name
+            // Each resolved annotation-first then label fallback, matching AlertMapper.
+            String container = getAnnotationOrLabel(annotations, labels,
+                    AlertConstants.Labels.CONTAINER_NAME, AlertConstants.Labels.CONTAINER);
+            if (container == null || container.isBlank()) {
+                errors.add("alerts[" + index + "] must contain non-blank '"
+                    + AlertConstants.Labels.CONTAINER + "' in annotations or labels");
             }
 
-            if (!item.getLabels().containsKey(AlertConstants.Labels.NAMESPACE)) {
-                errors.add("alerts[" + index + "].labels must contain '"
-                    + AlertConstants.Labels.NAMESPACE + "'");
+            String namespace = getAnnotationOrLabel(annotations, labels,
+                    AlertConstants.Labels.NAMESPACE, AlertConstants.Labels.NAMESPACE);
+            if (namespace == null || namespace.isBlank()) {
+                errors.add("alerts[" + index + "] must contain non-blank '"
+                    + AlertConstants.Labels.NAMESPACE + "' in annotations or labels");
+            }
+
+            String pod = getAnnotationOrLabel(annotations, labels,
+                    AlertConstants.Labels.POD_NAME, AlertConstants.Labels.POD);
+            if (pod == null || pod.isBlank()) {
+                errors.add("alerts[" + index + "] must contain non-blank '"
+                    + AlertConstants.Labels.POD_NAME + "' in annotations or labels");
             }
         }
+    }
+
+    /**
+     * Resolves a value by checking {@code annotationKey} in annotations first,
+     * then {@code labelKey} in labels as fallback — matches the lookup order used
+     * throughout the alert processing pipeline.
+     *
+     * <p>Pass the same key for both parameters when the key is identical in both maps.
+     *
+     * @param annotations   the annotations map (may be null)
+     * @param labels        the labels map (may be null)
+     * @param annotationKey the key to look up in annotations
+     * @param labelKey      the key to look up in labels as fallback
+     * @return the resolved value, or {@code null} if absent from both maps
+     */
+    public static String getAnnotationOrLabel(Map<String, String> annotations,
+                                              Map<String, String> labels,
+                                              String annotationKey,
+                                              String labelKey) {
+        if (annotations != null) {
+            String value = annotations.get(annotationKey);
+            if (value != null) return value;
+        }
+        return labels != null ? labels.get(labelKey) : null;
     }
 }

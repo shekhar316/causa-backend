@@ -53,7 +53,7 @@ public final class AlertConstants {
     /**
      * Manual analysis trigger constants.
      *
-     * <p>Used by POST /api/v1/diagnostics/trigger to synthesise a webhook-compatible alert.
+     * <p>Used by POST /api/v1/diagnostics to synthesise a webhook-compatible alert.
      */
     public static final class ManualTrigger {
         private ManualTrigger() {}

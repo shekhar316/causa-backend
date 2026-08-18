@@ -68,6 +68,7 @@ class WebhookControllerTest {
             AlertWebhookRequest.AlertItem item = new AlertWebhookRequest.AlertItem();
             item.setStatus("firing");
             item.setLabels(Map.of("alertname", "TestAlert_" + i, "container", "c-" + i, "namespace", "default"));
+            item.setAnnotations(Map.of("pod_name", "pod-" + i));
             item.setFingerprint("fp-" + i);
             items.add(item);
         }

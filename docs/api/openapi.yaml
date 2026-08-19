@@ -108,6 +108,34 @@ paths:
       summary: List Diagnostics
       tags:
       - Diagnostics Controller
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagnosticTriggerRequest"
+        required: true
+      responses:
+        "200":
+          description: OK — diagnostic pipeline initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "400":
+          description: Bad Request — missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+      summary: Trigger Diagnostic
+      description: >
+        Manually triggers a root-cause analysis. Internally wraps the alert webhook
+        pipeline. Required fields depend on platform type (cluster or vm).
+      tags:
+      - Diagnostics Controller
   /api/v1/diagnostics/{id}:
     get:
       parameters:
@@ -210,6 +238,35 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AlertItem"
+    DiagnosticTriggerRequest:
+      type: object
+      description: >
+        Payload for manually triggering a root-cause analysis.
+        For cluster platform: namespace, container, and pod_name are required.
+        For vm platform: workload_name is required.
+      properties:
+        namespace:
+          type: string
+          description: Kubernetes namespace (required for cluster platform)
+        container:
+          type: string
+          description: Container name (required for cluster platform)
+        pod_name:
+          type: string
+          description: Pod name (required for cluster platform)
+        workload_name:
+          type: string
+          description: Workload / application name (required for vm platform)
+        workload_type:
+          type: string
+          description: e.g. Deployment, StatefulSet
+        cluster_name:
+          type: string
+          description: Cluster name override
+        severity:
+          type: string
+          description: "Alert severity: critical (default), warning, or info"
+          enum: [critical, warning, info]
     ConfigUpdateRequest:
       type: object
       properties:

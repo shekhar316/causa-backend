@@ -185,7 +185,6 @@ public final class LogMessages {
         // Manual trigger API
         public static final String DIAGNOSTIC_TRIGGER_REQUEST  = "POST /api/v1/diagnostics manual trigger request received";
         public static final String DIAGNOSTIC_TRIGGER_ACCEPTED = "Manual diagnostic trigger accepted";
-        public static final String DIAGNOSTIC_TRIGGER_INVALID  = "Manual diagnostic trigger request validation failed";
     }
 
     /**

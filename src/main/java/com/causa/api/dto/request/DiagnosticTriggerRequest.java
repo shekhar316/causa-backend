@@ -9,8 +9,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p>Payload for POST /api/v1/diagnostics — manually triggers a root-cause analysis
  * without requiring a full Prometheus Alertmanager webhook format.
  *
- * <p>At least one of {@code container}, {@code pod_name}, or {@code workload_name} must be
- * provided alongside {@code namespace}.
+ * <p>For cluster environment {@code container}, {@code pod_name}, {@code namespace} 
+ * is required and for vm environment {@code workload_name} must be
+ * provided.
  *
  * @since 0.0.1
  */

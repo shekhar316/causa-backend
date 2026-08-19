@@ -267,6 +267,7 @@ components:
           type: string
           description: "Alert severity: critical (default), warning, or info"
           enum: [critical, warning, info]
+          default: critical
     ConfigUpdateRequest:
       type: object
       properties:

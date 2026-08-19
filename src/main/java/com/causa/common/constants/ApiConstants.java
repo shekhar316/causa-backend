@@ -126,6 +126,16 @@ public final class ApiConstants {
             public static final String BY_KEY = "/{" + PATH_PARAM_KEY + "}";
             public static final String QUERY_CATEGORY = "category";
         }
+
+        /**
+         * Pagination query parameters shared across paginated list endpoints.
+         */
+        public static final class Pagination {
+            private Pagination() {}
+
+            public static final String QUERY_PAGE      = "page";
+            public static final String QUERY_PAGE_SIZE = "page_size";
+        }
     }
 
     /**

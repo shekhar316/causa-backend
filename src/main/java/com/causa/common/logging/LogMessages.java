@@ -295,6 +295,16 @@ public final class LogMessages {
     }
 
     /**
+     * Pagination-related log messages.
+     */
+    public static final class Pagination {
+        private Pagination() {}
+
+        public static final String INVALID_PAGE      = "Invalid page parameter — must be >= 1; defaulting to 1";
+        public static final String INVALID_PAGE_SIZE = "Invalid page_size parameter — must be >= 1; using configured default";
+    }
+
+    /**
      * Common log field names.
      */
     public static final class Fields {

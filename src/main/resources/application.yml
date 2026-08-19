@@ -128,6 +128,13 @@ causa:
       skills-dir: ${LLM_SKILLS_DIR:}
     google-application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
 
+  # API Configuration
+  api:
+    pagination:
+      # Default number of items returned per page when no page_size query param is provided.
+      # Override at runtime via CAUSA_API_PAGE_SIZE env var or the POST /api/v1/configs endpoint.
+      default-page-size: ${CAUSA_API_PAGE_SIZE:10}
+
   # Alert Configuration
   alerts:
     filter-severity: ${CAUSA_ALERT_SEVERITY:critical}

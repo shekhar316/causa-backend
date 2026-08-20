@@ -70,6 +70,21 @@ public final class Diagnostic {
     public static Builder builder() { return new Builder(); }
 
     // -------------------------------------------------------------------------
+    // Filter — query criteria for list operations
+    // -------------------------------------------------------------------------
+
+    /**
+     * Placeholder filter for diagnostic list queries.
+     *
+     * <p>No filter fields exist today — add them here as the product requires them
+     * without changing the repository or service interface signatures.
+     */
+    public record Filter() {
+        /** Returns an empty filter — matches every diagnostic. */
+        public static Filter empty() { return new Filter(); }
+    }
+
+    // -------------------------------------------------------------------------
     // Builder
     // -------------------------------------------------------------------------
 

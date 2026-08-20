@@ -330,7 +330,7 @@ public final class LogMessages {
         private Pagination() {}
 
         public static final String INVALID_PAGE      = "Invalid page parameter — must be >= 1";
-        public static final String INVALID_PAGE_SIZE = "Invalid page_size — must be between 1 and 100";
+        public static final String INVALID_PAGE_SIZE = "Invalid page_size — must be between 1 and the configured maximum";
         public static final String INVALID_PARAM     = "Invalid pagination parameter";
     }
 

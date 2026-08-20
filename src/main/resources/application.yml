@@ -135,8 +135,6 @@ causa:
       default-page-size: ${CAUSA_API_PAGE_SIZE:20}
       # Hard upper cap — requests above this are rejected with HTTP 400.
       max-page-size: ${CAUSA_API_MAX_PAGE_SIZE:100}
-      # Default sort direction when sort_dir query param is omitted. Values: asc | desc
-      default-sort-dir: ${CAUSA_API_SORT_DIR:desc}
 
   # Alert Configuration
   alerts:

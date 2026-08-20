@@ -1,12 +1,12 @@
 package com.causa.core.domain;
 
 /**
- * Pagination and sorting request value object.
+ * Pagination request value object.
  *
- * <p>Pure value carrier — no defaults or caps live here. All defaults
- * ({@code default-page-size}, {@code default-sort-dir}) and the max page size cap
- * are configured in {@code application.yml} under {@code causa.api.pagination.*}
- * and resolved by the service layer before constructing this record.
+ * <p>Pure value carrier — no defaults or caps live here. The default page size
+ * and max page size cap are configured in {@code application.yml} under
+ * {@code causa.api.pagination.*} and resolved by the service layer before
+ * constructing this record.
  *
  * <p>Page index is <strong>1-based</strong> externally (matching the API contract).
  * Use {@link #panachePage()} to obtain the 0-based index required by Panache.
@@ -15,22 +15,18 @@ package com.causa.core.domain;
  */
 public record PageRequest(
         int page,
-        int size,
-        String sortBy,
-        String sortDir
+        int size
 ) {
 
     /**
-     * Creates a {@link PageRequest} with explicit sort parameters.
+     * Creates a {@link PageRequest}.
      *
-     * @param page    1-based page index (must be ≥ 1)
-     * @param size    items per page
-     * @param sortBy  field name to sort by (must be whitelisted by the caller)
-     * @param sortDir {@code "asc"} or {@code "desc"}
+     * @param page 1-based page index (must be ≥ 1)
+     * @param size items per page
      * @return a new {@link PageRequest}
      */
-    public static PageRequest of(int page, int size, String sortBy, String sortDir) {
-        return new PageRequest(page, size, sortBy, sortDir);
+    public static PageRequest of(int page, int size) {
+        return new PageRequest(page, size);
     }
 
     /**
@@ -40,14 +36,5 @@ public record PageRequest(
      */
     public int panachePage() {
         return page - 1;
-    }
-
-    /**
-     * Returns {@code true} if the sort direction is ascending.
-     *
-     * @return {@code true} for {@code "asc"} (case-insensitive), {@code false} otherwise
-     */
-    public boolean isAscending() {
-        return "asc".equalsIgnoreCase(sortDir);
     }
 }

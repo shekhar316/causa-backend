@@ -128,7 +128,7 @@ public final class ApiConstants {
         }
 
         /**
-         * Pagination and sorting query parameter names shared across paginated list endpoints.
+         * Pagination query parameter names shared across paginated list endpoints.
          *
          * <p>Default values and the max page size cap are configured in
          * {@code application.yml} under {@code causa.api.pagination.*} and injected
@@ -139,36 +139,8 @@ public final class ApiConstants {
 
             public static final String QUERY_PAGE      = "page";
             public static final String QUERY_PAGE_SIZE = "page_size";
-            public static final String QUERY_SORT      = "sort";
-            public static final String QUERY_SORT_DIR  = "sort_dir";
-
-            public static final String SORT_DIR_ASC  = "asc";
-            public static final String SORT_DIR_DESC = "desc";
         }
 
-        /**
-         * Whitelisted sort fields per resource.
-         * Only these values are accepted for the {@code sort} query parameter.
-         */
-        public static final class SortFields {
-            private SortFields() {}
-
-            /** Allowed sort fields for GET /api/v1/alerts. */
-            public static final java.util.Set<String> ALERTS = java.util.Set.of(
-                "created_at", "alert_timestamp", "severity"
-            );
-
-            /** Default sort field for alerts. */
-            public static final String ALERTS_DEFAULT = "created_at";
-
-            /** Allowed sort fields for GET /api/v1/diagnostics. */
-            public static final java.util.Set<String> DIAGNOSTICS = java.util.Set.of(
-                "created_at", "status"
-            );
-
-            /** Default sort field for diagnostics. */
-            public static final String DIAGNOSTICS_DEFAULT = "created_at";
-        }
     }
 
     /**

@@ -300,8 +300,11 @@ public final class LogMessages {
     public static final class Pagination {
         private Pagination() {}
 
-        public static final String INVALID_PAGE      = "Invalid page parameter — must be >= 1; defaulting to 1";
-        public static final String INVALID_PAGE_SIZE = "Invalid page_size parameter — must be >= 1; using configured default";
+        public static final String INVALID_PAGE      = "Invalid page parameter — must be >= 1";
+        public static final String INVALID_PAGE_SIZE = "Invalid page_size — must be between 1 and 100";
+        public static final String INVALID_SORT      = "Invalid sort field — not in the allowed list";
+        public static final String INVALID_SORT_DIR  = "Invalid sort_dir — must be 'asc' or 'desc'";
+        public static final String INVALID_PARAM     = "Invalid pagination parameter";
     }
 
     /**

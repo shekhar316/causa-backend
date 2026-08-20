@@ -128,7 +128,11 @@ public final class ApiConstants {
         }
 
         /**
-         * Pagination, sorting query parameters shared across paginated list endpoints.
+         * Pagination and sorting query parameter names shared across paginated list endpoints.
+         *
+         * <p>Default values and the max page size cap are configured in
+         * {@code application.yml} under {@code causa.api.pagination.*} and injected
+         * via {@code @ConfigProperty} in the service layer.
          */
         public static final class Pagination {
             private Pagination() {}
@@ -140,10 +144,6 @@ public final class ApiConstants {
 
             public static final String SORT_DIR_ASC  = "asc";
             public static final String SORT_DIR_DESC = "desc";
-
-            public static final int DEFAULT_PAGE      = 1;
-            public static final int DEFAULT_PAGE_SIZE = 20;
-            public static final int MAX_PAGE_SIZE     = 100;
         }
 
         /**

@@ -131,9 +131,12 @@ causa:
   # API Configuration
   api:
     pagination:
-      # Default number of items returned per page when no page_size query param is provided.
-      # Override at runtime via CAUSA_API_PAGE_SIZE env var or the POST /api/v1/configs endpoint.
-      default-page-size: ${CAUSA_API_PAGE_SIZE:10}
+      # Default number of items returned per page when page_size query param is omitted.
+      default-page-size: ${CAUSA_API_PAGE_SIZE:20}
+      # Hard upper cap — requests above this are rejected with HTTP 400.
+      max-page-size: ${CAUSA_API_MAX_PAGE_SIZE:100}
+      # Default sort direction when sort_dir query param is omitted. Values: asc | desc
+      default-sort-dir: ${CAUSA_API_SORT_DIR:desc}
 
   # Alert Configuration
   alerts:

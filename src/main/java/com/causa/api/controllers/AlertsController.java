@@ -148,14 +148,13 @@ public class AlertsController {
         labels.put(AlertConstants.Labels.SEVERITY, severity);
         labels.put(AlertConstants.Labels.NAMESPACE, request.getNamespace() != null ? request.getNamespace() : "");
         labels.put(AlertConstants.Labels.CONTAINER, request.getContainer() != null ? request.getContainer() : "");
+        labels.put(AlertConstants.Labels.POD, request.getPodName() != null ? request.getPodName() : "");
+        labels.put(AlertConstants.Labels.CLUSTER_NAME, request.getClusterName() != null ? request.getClusterName() : "");
+        labels.put(AlertConstants.Labels.WORKLOAD_TYPE, request.getWorkloadType() != null ? request.getWorkloadType() : "");
 
         Map<String, String> annotations = new HashMap<>();
         annotations.put(AlertConstants.Labels.ALERT_SOURCE, AlertConstants.ManualTrigger.ALERT_SOURCE);
-        if (request.getPodName() != null) annotations.put(AlertConstants.Labels.POD_NAME, request.getPodName());
-        if (request.getContainer() != null) annotations.put(AlertConstants.Labels.CONTAINER_NAME, request.getContainer());
         if (request.getWorkloadName() != null) annotations.put(AlertConstants.Labels.WORKLOAD_NAME, request.getWorkloadName());
-        if (request.getWorkloadType() != null) annotations.put(AlertConstants.Labels.WORKLOAD_TYPE, request.getWorkloadType());
-        if (request.getClusterName() != null) annotations.put(AlertConstants.Labels.CLUSTER_NAME, request.getClusterName());
 
         AlertWebhookRequest.AlertItem item = new AlertWebhookRequest.AlertItem();
         item.setStatus(AlertConstants.Webhook.STATUS_FIRING);

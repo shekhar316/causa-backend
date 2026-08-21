@@ -2,7 +2,6 @@ package com.causa.api.controllers;
 
 import com.causa.api.dto.response.DiagnosticDetailResponse;
 import com.causa.api.dto.response.DiagnosticListItemResponse;
-import com.causa.api.mappers.DiagnosticTriggerMapper;
 import com.causa.common.constants.AlertConstants.AlertSeverity;
 import com.causa.common.constants.AlertConstants.AlertStatus;
 import com.causa.common.constants.DiagnosticConstants.DiagnosticStatus;
@@ -41,20 +40,13 @@ class DiagnosticsControllerTest {
     @Mock
     private AlertRepository alertRepository;
 
-    @Mock
-    private DiagnosticTriggerMapper triggerMapper;
-
-    @Mock
-    private WebhookController webhookController;
-
     private DiagnosticsController controller;
 
     private static final String CLUSTER_NAME = "test-cluster";
 
     @BeforeEach
     void setUp() {
-        controller = new DiagnosticsController(
-                diagnosticService, alertRepository, triggerMapper, webhookController, CLUSTER_NAME);
+        controller = new DiagnosticsController(diagnosticService, alertRepository, CLUSTER_NAME);
     }
 
     private static Diagnostic buildDiagnostic(String id, String alertId) {

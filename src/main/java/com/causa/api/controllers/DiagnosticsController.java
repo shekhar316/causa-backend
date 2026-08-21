@@ -1,11 +1,8 @@
 package com.causa.api.controllers;
 
-import com.causa.api.dto.request.DiagnosticTriggerRequest;
-import com.causa.api.dto.request.AlertWebhookRequest;
 import com.causa.api.dto.response.DiagnosticDetailResponse;
 import com.causa.api.dto.response.DiagnosticListItemResponse;
 import com.causa.api.dto.response.ErrorResponse;
-import com.causa.api.mappers.DiagnosticTriggerMapper;
 import com.causa.common.constants.ApiConstants;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
@@ -16,7 +13,6 @@ import com.causa.core.services.DiagnosticService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -32,7 +28,6 @@ import java.util.Optional;
  *
  * <p>GET  /api/v1/diagnostics        — list all diagnostics (summary)
  * <p>GET  /api/v1/diagnostics/{id}   — full diagnostic detail
- * <p>POST /api/v1/diagnostics        — manually trigger a diagnostic
  *
  * @since 0.0.1
  */
@@ -45,21 +40,15 @@ public class DiagnosticsController {
 
     private final DiagnosticService diagnosticService;
     private final AlertRepository alertRepository;
-    private final DiagnosticTriggerMapper triggerMapper;
-    private final WebhookController webhookController;
     private final String clusterName;
 
     @Inject
     public DiagnosticsController(DiagnosticService diagnosticService,
                                   AlertRepository alertRepository,
-                                  DiagnosticTriggerMapper triggerMapper,
-                                  WebhookController webhookController,
                                   @ConfigProperty(name = "causa.cluster.name", defaultValue = "default")
                                   String clusterName) {
         this.diagnosticService  = diagnosticService;
         this.alertRepository    = alertRepository;
-        this.triggerMapper      = triggerMapper;
-        this.webhookController  = webhookController;
         this.clusterName        = clusterName;
     }
 
@@ -121,23 +110,4 @@ public class DiagnosticsController {
         return Response.ok(DiagnosticDetailResponse.from(diagnostic, alert, clusterName)).build();
     }
 
-    // -------------------------------------------------------------------------
-    // POST /api/v1/diagnostics
-    // -------------------------------------------------------------------------
-
-    @POST
-    public Response triggerDiagnostic(DiagnosticTriggerRequest request) {
-        log.info(LogMessages.Diagnostic.DIAGNOSTIC_TRIGGER_REQUEST).log();
-
-        AlertWebhookRequest webhookRequest = triggerMapper.toWebhookRequest(request);
-
-        log.info(LogMessages.Diagnostic.DIAGNOSTIC_TRIGGER_ACCEPTED)
-            .field("namespace",    request != null ? request.getNamespace()    : null)
-            .field("container",    request != null ? request.getContainer()    : null)
-            .field("podName",      request != null ? request.getPodName()      : null)
-            .field("workloadName", request != null ? request.getWorkloadName() : null)
-            .log();
-
-        return webhookController.receiveAlerts(webhookRequest);
-    }
 }

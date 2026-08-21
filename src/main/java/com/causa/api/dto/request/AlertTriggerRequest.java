@@ -4,19 +4,19 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Diagnostic Trigger Request DTO
+ * Alert Trigger Request DTO
  *
- * <p>Payload for POST /api/v1/diagnostics — manually triggers a root-cause analysis
+ * <p>Payload for POST /api/v1/alerts — manually creates a synthetic alert
  * without requiring a full Prometheus Alertmanager webhook format.
  *
- * <p>For cluster environment {@code container}, {@code pod_name}, {@code namespace} 
+ * <p>For cluster environment {@code container}, {@code pod}, {@code namespace}
  * is required and for vm environment {@code workload_name} must be
  * provided.
  *
  * @since 0.0.1
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DiagnosticTriggerRequest {
+public class AlertTriggerRequest {
 
     @JsonProperty("namespace")
     private String namespace;
@@ -24,7 +24,7 @@ public class DiagnosticTriggerRequest {
     @JsonProperty("container")
     private String container;
 
-    @JsonProperty("pod_name")
+    @JsonProperty("pod")
     private String podName;
 
     @JsonProperty("workload_name")
@@ -41,8 +41,6 @@ public class DiagnosticTriggerRequest {
      */
     @JsonProperty("severity")
     private String severity;
-
-    // Getters and setters
 
     public String getNamespace() {
         return namespace;

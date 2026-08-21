@@ -1,7 +1,6 @@
 package com.causa.api.mappers;
 
 import com.causa.api.dto.request.AlertWebhookRequest;
-import com.causa.api.validators.AlertWebhookValidator;
 import com.causa.common.constants.AlertConstants;
 import com.causa.common.constants.AlertConstants.AlertSeverity;
 import com.causa.common.constants.AlertConstants.AlertStatus;
@@ -74,20 +73,15 @@ public class AlertMapper {
         String alertName   = labels.get(AlertConstants.Labels.ALERT_NAME);
         String severityStr = labels.getOrDefault(AlertConstants.Labels.SEVERITY, appConfig.getAlertConfig().getFilterSeverity());
 
-        // Workload fields — annotations first (PrometheusRule uses container_name / pod_name as annotation
-        // keys), label keys (container / pod) used as fallback for older or custom alert sources.
-        String containerName = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
-            AlertConstants.Labels.CONTAINER_NAME, AlertConstants.Labels.CONTAINER);
-        String podName       = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
-            AlertConstants.Labels.POD_NAME, AlertConstants.Labels.POD);
-        String namespace     = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
-            AlertConstants.Labels.NAMESPACE,    AlertConstants.Labels.NAMESPACE);
-        String clusterName   = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
-            AlertConstants.Labels.CLUSTER_NAME, AlertConstants.Labels.CLUSTER_NAME);
-        String workloadType  = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
-            AlertConstants.Labels.WORKLOAD_TYPE, AlertConstants.Labels.WORKLOAD_TYPE);
-        String workloadName  = AlertWebhookValidator.getAnnotationOrLabel(annotations, labels,
-            AlertConstants.Labels.WORKLOAD_NAME, AlertConstants.Labels.WORKLOAD_NAME);
+        // Workload fields — standard Prometheus labels, direct label lookup
+        String containerName = labels.get(AlertConstants.Labels.CONTAINER);
+        String podName       = labels.get(AlertConstants.Labels.POD);
+        String namespace     = labels.get(AlertConstants.Labels.NAMESPACE);
+        String clusterName   = labels.get(AlertConstants.Labels.CLUSTER_NAME);
+        String workloadType  = labels.get(AlertConstants.Labels.WORKLOAD_TYPE);
+
+        // workload_name — always set as annotation by PrometheusRule
+        String workloadName  = annotations.get(AlertConstants.Labels.WORKLOAD_NAME);
 
         // alert_source — from annotations, default to "prometheus"
         String alertSource = annotations.getOrDefault(

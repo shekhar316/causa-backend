@@ -2,6 +2,7 @@ package com.causa.api.validators;
 
 import com.causa.api.dto.request.AlertWebhookRequest;
 import com.causa.common.constants.AlertConstants;
+import org.apache.commons.lang3.StringUtils;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -93,70 +94,35 @@ public class AlertWebhookValidator {
             return;
         }
 
+        Map<String, String> annotations = item.getAnnotations() != null ? item.getAnnotations() : Map.of();
+        Map<String, String> labels      = item.getLabels();
+
         // alertname is always required
-        if (!item.getLabels().containsKey(AlertConstants.Labels.ALERT_NAME)) {
+        if (StringUtils.isBlank(labels.get(AlertConstants.Labels.ALERT_NAME))) {
             errors.add("alerts[" + index + "].labels must contain '"
                 + AlertConstants.Labels.ALERT_NAME + "'");
         }
 
-        Map<String, String> annotations = item.getAnnotations();
-        Map<String, String> labels      = item.getLabels();
-
         if ("vm".equals(platform)) {
-            // VM platform — require workload_name (annotation first, label fallback, non-blank)
-            String workloadName = getAnnotationOrLabel(annotations, labels,
-                    AlertConstants.Labels.WORKLOAD_NAME, AlertConstants.Labels.WORKLOAD_NAME);
-            if (workloadName == null || workloadName.isBlank()) {
+            // VM platform — workload_name is always set as annotation by PrometheusRule
+            if (StringUtils.isBlank(annotations.get(AlertConstants.Labels.WORKLOAD_NAME))) {
                 errors.add("alerts[" + index + "] must contain non-blank '"
-                    + AlertConstants.Labels.WORKLOAD_NAME + "' in annotations or labels");
+                    + AlertConstants.Labels.WORKLOAD_NAME + "' in annotations");
             }
         } else {
-            // Cluster platform — require container, namespace, and pod_name
-            // Each resolved annotation-first then label fallback, matching AlertMapper.
-            String container = getAnnotationOrLabel(annotations, labels,
-                    AlertConstants.Labels.CONTAINER_NAME, AlertConstants.Labels.CONTAINER);
-            if (container == null || container.isBlank()) {
+            // Cluster platform — container, namespace, and pod are standard Prometheus labels
+            if (StringUtils.isBlank(labels.get(AlertConstants.Labels.CONTAINER))) {
                 errors.add("alerts[" + index + "] must contain non-blank '"
-                    + AlertConstants.Labels.CONTAINER + "' in annotations or labels");
+                    + AlertConstants.Labels.CONTAINER + "' in labels");
             }
-
-            String namespace = getAnnotationOrLabel(annotations, labels,
-                    AlertConstants.Labels.NAMESPACE, AlertConstants.Labels.NAMESPACE);
-            if (namespace == null || namespace.isBlank()) {
+            if (StringUtils.isBlank(labels.get(AlertConstants.Labels.NAMESPACE))) {
                 errors.add("alerts[" + index + "] must contain non-blank '"
-                    + AlertConstants.Labels.NAMESPACE + "' in annotations or labels");
+                    + AlertConstants.Labels.NAMESPACE + "' in labels");
             }
-
-            String pod = getAnnotationOrLabel(annotations, labels,
-                    AlertConstants.Labels.POD_NAME, AlertConstants.Labels.POD);
-            if (pod == null || pod.isBlank()) {
+            if (StringUtils.isBlank(labels.get(AlertConstants.Labels.POD))) {
                 errors.add("alerts[" + index + "] must contain non-blank '"
-                    + AlertConstants.Labels.POD_NAME + "' in annotations or labels");
+                    + AlertConstants.Labels.POD + "' in labels");
             }
         }
-    }
-
-    /**
-     * Resolves a value by checking {@code annotationKey} in annotations first,
-     * then {@code labelKey} in labels as fallback — matches the lookup order used
-     * throughout the alert processing pipeline.
-     *
-     * <p>Pass the same key for both parameters when the key is identical in both maps.
-     *
-     * @param annotations   the annotations map (may be null)
-     * @param labels        the labels map (may be null)
-     * @param annotationKey the key to look up in annotations
-     * @param labelKey      the key to look up in labels as fallback
-     * @return the resolved value, or {@code null} if absent from both maps
-     */
-    public static String getAnnotationOrLabel(Map<String, String> annotations,
-                                              Map<String, String> labels,
-                                              String annotationKey,
-                                              String labelKey) {
-        if (annotations != null) {
-            String value = annotations.get(annotationKey);
-            if (value != null) return value;
-        }
-        return labels != null ? labels.get(labelKey) : null;
     }
 }

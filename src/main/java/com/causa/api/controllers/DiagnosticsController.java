@@ -11,7 +11,6 @@ import com.causa.core.domain.Diagnostic;
 import com.causa.core.ports.AlertRepository;
 import com.causa.core.services.DiagnosticService;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -26,14 +25,13 @@ import java.util.Optional;
 /**
  * Diagnostics Controller
  *
- * <p>GET  /api/v1/diagnostics        — list all diagnostics (summary)
- * <p>GET  /api/v1/diagnostics/{id}   — full diagnostic detail
+ * <p>GET /api/v1/diagnostics        — list all diagnostics (summary)
+ * <p>GET /api/v1/diagnostics/{id}   — full diagnostic detail
  *
  * @since 0.0.1
  */
 @Path(ApiConstants.Paths.Diagnostics.BASE)
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public class DiagnosticsController {
 
     private static final CausaLogger log = CausaLogger.getLogger(DiagnosticsController.class);
@@ -47,9 +45,9 @@ public class DiagnosticsController {
                                   AlertRepository alertRepository,
                                   @ConfigProperty(name = "causa.cluster.name", defaultValue = "default")
                                   String clusterName) {
-        this.diagnosticService  = diagnosticService;
-        this.alertRepository    = alertRepository;
-        this.clusterName        = clusterName;
+        this.diagnosticService = diagnosticService;
+        this.alertRepository   = alertRepository;
+        this.clusterName       = clusterName;
     }
 
     // -------------------------------------------------------------------------
@@ -109,5 +107,4 @@ public class DiagnosticsController {
 
         return Response.ok(DiagnosticDetailResponse.from(diagnostic, alert, clusterName)).build();
     }
-
 }

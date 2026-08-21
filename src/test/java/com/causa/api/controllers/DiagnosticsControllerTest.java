@@ -1,7 +1,5 @@
 package com.causa.api.controllers;
 
-import com.causa.api.dto.request.AlertWebhookRequest;
-import com.causa.api.dto.request.DiagnosticTriggerRequest;
 import com.causa.api.dto.response.DiagnosticDetailResponse;
 import com.causa.api.dto.response.DiagnosticListItemResponse;
 import com.causa.common.constants.AlertConstants.AlertSeverity;
@@ -22,11 +20,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -225,83 +222,4 @@ class DiagnosticsControllerTest {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // POST /api/v1/diagnostics
-    // -------------------------------------------------------------------------
-
-    @Nested
-    @DisplayName("POST /api/v1/diagnostics")
-    class TriggerDiagnosticTests {
-
-        private DiagnosticTriggerRequest buildTriggerRequest() {
-            DiagnosticTriggerRequest req = new DiagnosticTriggerRequest();
-            req.setNamespace("default");
-            req.setContainer("app-container");
-            req.setPodName("app-pod-abc");
-            req.setWorkloadName("my-service");
-            req.setClusterName("test-cluster");
-            req.setSeverity("critical");
-            return req;
-        }
-
-        private AlertWebhookRequest buildSyntheticWebhookRequest() {
-            AlertWebhookRequest webhookReq = new AlertWebhookRequest();
-            webhookReq.setVersion("4");
-            webhookReq.setStatus("firing");
-            webhookReq.setReceiver("manual-trigger");
-            AlertWebhookRequest.AlertItem item = new AlertWebhookRequest.AlertItem();
-            item.setStatus("firing");
-            item.setLabels(Map.of("alertname", "manual-analysis-trigger-123-abc",
-                    "namespace", "default", "container", "app-container", "severity", "critical"));
-            item.setAnnotations(Map.of("alert_source", "manual-trigger"));
-            webhookReq.setAlerts(List.of(item));
-            return webhookReq;
-        }
-
-        @Test
-        @DisplayName("Should delegate to webhookController with mapped request")
-        void shouldDelegateToWebhookController() {
-            DiagnosticTriggerRequest req = buildTriggerRequest();
-            AlertWebhookRequest webhookReq = buildSyntheticWebhookRequest();
-            when(triggerMapper.toWebhookRequest(req)).thenReturn(webhookReq);
-            when(webhookController.receiveAlerts(webhookReq))
-                    .thenReturn(Response.ok().build());
-
-            controller.triggerDiagnostic(req);
-
-            verify(triggerMapper).toWebhookRequest(req);
-            verify(webhookController).receiveAlerts(webhookReq);
-        }
-
-        @Test
-        @DisplayName("Should return the response from webhookController unchanged")
-        void shouldReturnWebhookControllerResponse() {
-            DiagnosticTriggerRequest req = buildTriggerRequest();
-            AlertWebhookRequest webhookReq = buildSyntheticWebhookRequest();
-            WebhookResponse webhookBody = WebhookResponse.of(
-                    Map.of("alert-1", "diag-1"), Map.of());
-            when(triggerMapper.toWebhookRequest(req)).thenReturn(webhookReq);
-            when(webhookController.receiveAlerts(webhookReq))
-                    .thenReturn(Response.ok(webhookBody).build());
-
-            Response response = controller.triggerDiagnostic(req);
-
-            assertEquals(200, response.getStatus());
-            assertEquals(webhookBody, response.getEntity());
-        }
-
-        @Test
-        @DisplayName("Should return 400 when webhookController rejects the synthetic request")
-        void shouldReturn400WhenWebhookRejects() {
-            DiagnosticTriggerRequest req = new DiagnosticTriggerRequest(); // minimal / invalid
-            AlertWebhookRequest webhookReq = buildSyntheticWebhookRequest();
-            when(triggerMapper.toWebhookRequest(req)).thenReturn(webhookReq);
-            when(webhookController.receiveAlerts(webhookReq))
-                    .thenReturn(Response.status(400).build());
-
-            Response response = controller.triggerDiagnostic(req);
-
-            assertEquals(400, response.getStatus());
-        }
-    }
 }

@@ -10,7 +10,6 @@ This document covers the diagnostic listing and diagnostic detail endpoints.
 |---|---|---|---|
 | `GET /api/v1/diagnostics` | List diagnostic summaries | `200 OK` | `500 Server Error` |
 | `GET /api/v1/diagnostics/{id}` | Fetch full diagnostic detail by id | `200 OK` | `404 Not Found` |
-| `POST /api/v1/diagnostics` | Manually trigger a root-cause analysis | `200 OK` | `400 Bad Request`, `500 Server Error` |
 
 ---
 
@@ -171,96 +170,5 @@ If the diagnostic id does not exist, the API returns `404` with this shape:
   "statusCode": 404,
   "error": "Not Found",
   "message": "No diagnostic found with id: <id>"
-}
-```
-
-
----
-
-## POST `/api/v1/diagnostics`
-
-Manually triggers a root-cause analysis without a Prometheus Alertmanager webhook.  
-Internally this is a thin wrapper — the request is translated into a synthetic webhook payload and processed through the same pipeline as a real alert.
-
-### Platform-aware required fields
-
-| Platform (`causa.cluster.target-cluster-type`) | Required fields |
-|---|---|
-| `cluster` (default) | `namespace`, `container`,  `pod_name` |
-| `vm` | `workload_name` |
-
-### Request body
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `namespace` | string | cluster only | Kubernetes namespace |
-| `container` | string | cluster only | Container name |
-| `pod_name` | string | cluster only | Pod name for richer context |
-| `workload_name` | string | vm only | Workload / application name |
-| `workload_type` | string | no | e.g. `Deployment`, `StatefulSet` |
-| `cluster_name` | string | no | Cluster name (overrides runtime config) |
-| `severity` | string | no | `critical` (default), `warning`, or `info` |
-
-### Request example (cURL)
-
-**Cluster platform:**
-
-```bash
-curl -X POST http://localhost:8080/api/v1/diagnostics \
-  -H "Content-Type: application/json" \
-  -d '{
-    "namespace": "openshift-tuning",
-    "container": "auth-cache",
-    "pod_name": "auth-cache-1-6c5dfb54b9-4cmbf"
-  }'
-```
-
-**VM platform:**
-
-```bash
-curl -X POST http://localhost:8080/api/v1/diagnostics \
-  -H "Content-Type: application/json" \
-  -d '{
-    "workload_name": "my-app-vm"
-  }'
-```
-
-### Response example
-
-Returns the same [`WebhookResponse`](./alerts-api.md) shape as `POST /api/v1/webhooks/alerts`.
-
-```json
-{
-  "status": "accepted",
-  "message": "All 1 alerts accepted and diagnostics initiated",
-  "totalReceived": 1,
-  "totalAccepted": 1,
-  "totalRejected": 0,
-  "accepted": {
-    "alrt_aBcDeFgHiJkLmNoP": "diag_qRsTuVwXyZ012345"
-  },
-  "rejected": {},
-  "timestamp": "2026-08-18T15:32:01.123Z"
-}
-```
-
-### Alert name generated
-
-Each manual trigger generates a unique synthetic alert name. This is added to avoid the cool down period implemented on alert API. 
-
-```
-manual-analysis-trigger-<epoch-seconds>-<3-char-suffix>
-```
-
-Example: `manual-analysis-trigger-1722000000-aB3`
-
-### Error example
-
-```json
-{
-  "status": 400,
-  "error": "Validation Failed",
-  "message": "container is required; namespace is required",
-  "timestamp": "2026-08-18T15:32:01.123Z"
 }
 ```

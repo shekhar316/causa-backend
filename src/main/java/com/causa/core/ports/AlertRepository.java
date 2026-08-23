@@ -1,8 +1,11 @@
 package com.causa.core.ports;
 
 import com.causa.core.domain.Alert;
+import com.causa.core.domain.PageRequest;
+import com.causa.core.domain.PageResult;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -22,14 +25,22 @@ public interface AlertRepository {
 
     Optional<Alert> findById(String alertId);
 
-    List<Alert> findAll();
+    /**
+     * Returns alerts matching all non-null/non-blank filter fields (AND logic),
+     * paginated according to {@code pageRequest}.
+     *
+     * @param filter      filter criteria — use {@link Alert.Filter#empty()} for no filtering
+     * @param pageRequest page and size — use {@link PageRequest#of(int, int)} to construct
+     * @return a paginated result containing matching alerts and total count
+     */
+    PageResult<Alert> search(Alert.Filter filter, PageRequest pageRequest);
 
     /**
-     * Returns all alerts that match ALL non-null/non-blank parameters (AND logic).
-     * A null or blank value for any parameter means that filter is skipped.
+     * Batch-loads alerts by their IDs. Used to avoid N+1 queries in the
+     * diagnostics list endpoint.
      *
-     * @param workloadName filter by {@code workload_name} column (exact match); null = skip
-     * @param namespace    filter by {@code workload_info->>'namespace'} (exact match); null = skip
+     * @param ids list of alert IDs to load
+     * @return map of alertId → Alert for every ID that was found
      */
-    List<Alert> findByFilters(String workloadName, String namespace);
+    Map<String, Alert> findByIds(List<String> ids);
 }

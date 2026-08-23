@@ -1,5 +1,6 @@
 package com.causa.core.services.impl;
 
+import com.causa.common.exceptions.InvalidPaginationException;
 import com.causa.common.constants.DiagnosticConstants;
 import com.causa.common.constants.DiagnosticConstants.DiagnosticStatus;
 import com.causa.common.constants.DiagnosticConstants.Fields;
@@ -14,6 +15,8 @@ import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
 import com.causa.core.domain.Diagnostic;
 import com.causa.core.domain.DiagnosticContext;
+import com.causa.core.domain.PageRequest;
+import com.causa.core.domain.PageResult;
 import com.causa.core.domain.LLMRequest;
 import com.causa.core.domain.LLMResponse;
 import com.causa.core.domain.RootCauseAnalysis;
@@ -34,9 +37,9 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -71,6 +74,12 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     private final Validator validator;
     private final ExecutorService pipelineExecutor;
     private final Optional<RcaValidator> rcaValidator;
+
+    @ConfigProperty(name = "causa.api.pagination.default-page-size", defaultValue = "20")
+    int defaultPageSize;
+
+    @ConfigProperty(name = "causa.api.pagination.max-page-size", defaultValue = "100")
+    int maxPageSize;
 
     @Inject
     public DiagnosticServiceImpl(DiagnosticRepository diagnosticRepository,
@@ -870,8 +879,14 @@ public class DiagnosticServiceImpl implements DiagnosticService {
     }
 
     @Override
-    public List<Diagnostic> listDiagnostics() {
-        return diagnosticRepository.findAll();
+    public PageResult<Diagnostic> listDiagnostics(PageRequest pageRequest) {
+        int size = pageRequest.size() <= 0 ? defaultPageSize : pageRequest.size();
+        if (size > maxPageSize) {
+            throw new InvalidPaginationException(
+                "page_size must be between 1 and " + maxPageSize);
+        }
+        int page = pageRequest.page() <= 0 ? 1 : pageRequest.page();
+        return diagnosticRepository.search(PageRequest.of(page, size));
     }
 
     @Override

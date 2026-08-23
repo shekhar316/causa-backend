@@ -1,16 +1,20 @@
 package com.causa.core.services.impl;
 
 import com.causa.common.constants.AlertConstants.AlertSeverity;
+import com.causa.common.exceptions.InvalidPaginationException;
 import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
 import com.causa.config.AppConfig;
 import com.causa.core.domain.Alert;
+import com.causa.core.domain.PageRequest;
+import com.causa.core.domain.PageResult;
 import com.causa.core.ports.AlertRepository;
 import com.causa.core.services.AlertService;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -39,6 +43,12 @@ public class AlertServiceImpl implements AlertService {
 
     private AlertSeverity minimumSeverity;
     private Set<String> ignoredNamespaces;
+
+    @ConfigProperty(name = "causa.api.pagination.default-page-size", defaultValue = "20")
+    int defaultPageSize;
+
+    @ConfigProperty(name = "causa.api.pagination.max-page-size", defaultValue = "100")
+    int maxPageSize;
 
     @Inject
     public AlertServiceImpl(AppConfig appConfig, AlertRepository alertRepository) {
@@ -145,9 +155,14 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
-    public List<Alert> getAlerts(String workloadName, String namespace) {
-        // Delegates to repository which applies all non-blank filters with AND logic
-        return alertRepository.findByFilters(workloadName, namespace);
+    public PageResult<Alert> listAlerts(Alert.Filter filter, PageRequest pageRequest) {
+        int size = pageRequest.size() <= 0 ? defaultPageSize : pageRequest.size();
+        if (size > maxPageSize) {
+            throw new InvalidPaginationException(
+                "page_size must be between 1 and " + maxPageSize);
+        }
+        int page = pageRequest.page() <= 0 ? 1 : pageRequest.page();
+        return alertRepository.search(filter, PageRequest.of(page, size));
     }
 
     private boolean passesSeverityFilter(Alert alert) {

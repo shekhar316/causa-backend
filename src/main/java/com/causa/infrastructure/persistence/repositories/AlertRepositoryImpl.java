@@ -3,6 +3,8 @@ package com.causa.infrastructure.persistence.repositories;
 import com.causa.common.exceptions.AlertException;
 import com.causa.common.logging.LogMessages;
 import com.causa.core.domain.Alert;
+import com.causa.core.domain.PageRequest;
+import com.causa.core.domain.PageResult;
 import com.causa.core.ports.AlertRepository;
 import com.causa.infrastructure.persistence.entity.AlertEntity;
 import com.causa.infrastructure.persistence.mappers.AlertEntityMapper;
@@ -12,13 +14,19 @@ import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Alert Repository Implementation
  *
  * <p>Panache-based implementation of {@link AlertRepository}.
+ *
+ * <p>All list queries use native SQL because the {@code workload_info->>'namespace'} JSONB
+ * operator is not valid in JPQL — Panache's {@code find()} would throw at parse time.
  *
  * @since 0.0.1
  */
@@ -82,53 +90,87 @@ public class AlertRepositoryImpl implements AlertRepository {
             .map(AlertEntityMapper::toDomain);
     }
 
-    @Override
-    public List<Alert> findAll() {
-        return AlertEntity.<AlertEntity>listAll()
-            .stream()
-            .map(AlertEntityMapper::toDomain)
-            .toList();
-    }
-
     /**
-     * AND query using a native SQL statement so PostgreSQL JSONB operators ({@code ->>'namespace'})
-     * are valid. Panache {@code find()} only accepts JPQL which does not support JSONB syntax.
+     * Paginated search with optional AND-logic filters.
      *
-     * <p>Conditions added only for non-blank parameters — all present conditions are AND-ed.
+     * <p>Uses native SQL throughout because the {@code workload_info->>'namespace'} JSONB
+     * operator is illegal in JPQL. Parameters are positional to prevent SQL injection.
+     * The ORDER BY clause is fixed to {@code created_at DESC} — sorting is not exposed
+     * as a user-controlled parameter.
      */
     @Override
     @SuppressWarnings("unchecked")
-    public List<Alert> findByFilters(String workloadName, String namespace) {
-        boolean hasWorkload  = workloadName != null && !workloadName.isBlank();
-        boolean hasNamespace = namespace    != null && !namespace.isBlank();
-
-        if (!hasWorkload && !hasNamespace) {
-            return findAll();
-        }
+    public PageResult<Alert> search(Alert.Filter filter, PageRequest pageRequest) {
+        boolean hasWorkload  = !isBlank(filter.workloadName());
+        boolean hasNamespace = !isBlank(filter.namespace());
+        boolean hasStatus    = !isBlank(filter.status());
 
         List<String> clauses = new ArrayList<>();
         List<Object> params  = new ArrayList<>();
 
         if (hasWorkload) {
             clauses.add("workload_name = ?" + (params.size() + 1));
-            params.add(workloadName);
+            params.add(filter.workloadName());
         }
         if (hasNamespace) {
             // ->> is a PostgreSQL JSONB operator — only valid in native SQL, not JPQL
             clauses.add("workload_info->>'namespace' = ?" + (params.size() + 1));
-            params.add(namespace);
+            params.add(filter.namespace());
+        }
+        if (hasStatus) {
+            clauses.add("status = ?" + (params.size() + 1));
+            params.add(filter.status());
         }
 
-        String sql = "SELECT * FROM alerts WHERE " + String.join(" AND ", clauses);
+        String where  = clauses.isEmpty() ? "" : " WHERE " + String.join(" AND ", clauses);
+        int    offset = pageRequest.panachePage() * pageRequest.size();
 
-        Query q = em.createNativeQuery(sql, AlertEntity.class);
+        // Data query — fixed ORDER BY, LIMIT/OFFSET for pagination
+        String dataSql = "SELECT * FROM alerts" + where
+            + " ORDER BY created_at DESC"
+            + " LIMIT ?"  + (params.size() + 1)
+            + " OFFSET ?" + (params.size() + 2);
+
+        Query dataQ = em.createNativeQuery(dataSql, AlertEntity.class);
         for (int i = 0; i < params.size(); i++) {
-            q.setParameter(i + 1, params.get(i));
+            dataQ.setParameter(i + 1, params.get(i));
+        }
+        dataQ.setParameter(params.size() + 1, pageRequest.size());
+        dataQ.setParameter(params.size() + 2, offset);
+
+        // Count query — same WHERE, no ORDER BY / LIMIT
+        String countSql = "SELECT COUNT(*) FROM alerts" + where;
+        Query countQ = em.createNativeQuery(countSql);
+        for (int i = 0; i < params.size(); i++) {
+            countQ.setParameter(i + 1, params.get(i));
         }
 
-        return ((List<AlertEntity>) q.getResultList())
+        List<Alert> items = ((List<AlertEntity>) dataQ.getResultList())
             .stream()
             .map(AlertEntityMapper::toDomain)
             .toList();
+        long total = ((Number) countQ.getSingleResult()).longValue();
+
+        return PageResult.of(items, total, pageRequest);
+    }
+
+    /**
+     * Batch-loads alerts by ID — used by the diagnostics list endpoint to avoid N+1.
+     * Returns an empty map when {@code ids} is null or empty.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public Map<String, Alert> findByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return AlertEntity.<AlertEntity>list("id in ?1", ids)
+            .stream()
+            .map(AlertEntityMapper::toDomain)
+            .collect(Collectors.toMap(Alert::getAlertId, a -> a));
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 }

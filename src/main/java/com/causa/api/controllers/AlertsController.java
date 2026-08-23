@@ -12,6 +12,12 @@ import com.causa.common.utils.AlertNameUtils;
 import com.causa.core.services.AlertService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import com.causa.core.domain.Alert;
+import com.causa.core.domain.PageRequest;
+import com.causa.core.domain.PageResult;
+import com.causa.core.services.AlertService;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -55,15 +61,15 @@ public class AlertsController {
     /**
      * GET /api/v1/alerts/{id}
      *
-     * <p>Returns a single alert by its ID. If {@code workload_name} or {@code namespace}
-     * query params are also present, the request is rejected with 400.
+     * <p>Returns a single alert by its ID. Rejects the request with 400 if any
+     * list-only query params ({@code workload_name}, {@code namespace}) are also supplied.
      */
     @GET
     @Path(ApiConstants.Paths.Alerts.BY_ID)
     public Response getAlertById(
-            @PathParam(ApiConstants.Paths.Alerts.PATH_PARAM_ID)        String id,
-            @QueryParam(ApiConstants.Paths.Alerts.QUERY_WORKLOAD)      String workloadName,
-            @QueryParam(ApiConstants.Paths.Alerts.QUERY_NAMESPACE)     String namespace) {
+            @PathParam(ApiConstants.Paths.Alerts.PATH_PARAM_ID)    String id,
+            @QueryParam(ApiConstants.Paths.Alerts.QUERY_WORKLOAD)  String workloadName,
+            @QueryParam(ApiConstants.Paths.Alerts.QUERY_NAMESPACE) String namespace) {
 
         log.info(LogMessages.Alert.ALERTS_GET_REQUEST)
             .field("id", id)
@@ -94,31 +100,43 @@ public class AlertsController {
     /**
      * GET /api/v1/alerts
      *
-     * <p>Returns all alerts. Optionally filter by {@code workload_name} and/or {@code namespace}
-     * using AND logic. Pass neither to return all alerts.
+     * <p>Returns a paginated list of alerts. Optionally filter by {@code workload_name}
+     * and/or {@code namespace} using AND logic. Pass neither to return all alerts.
+     *
+     * <p>Pagination defaults are configured in {@code application.yml} under
+     * {@code causa.api.pagination.*}.
      */
     @GET
     public Response getAlerts(
-            @QueryParam(ApiConstants.Paths.Alerts.QUERY_WORKLOAD)  String workloadName,
-            @QueryParam(ApiConstants.Paths.Alerts.QUERY_NAMESPACE) String namespace) {
+            @QueryParam(ApiConstants.Paths.Alerts.QUERY_WORKLOAD)          String workloadName,
+            @QueryParam(ApiConstants.Paths.Alerts.QUERY_NAMESPACE)         String namespace,
+            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE)          @DefaultValue("1")  int page,
+            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE_SIZE)     @DefaultValue("0")  int pageSize) {
 
         log.info(LogMessages.Alert.ALERTS_GET_REQUEST)
             .field("workload_name", workloadName)
             .field("namespace", namespace)
+            .field("page", page)
+            .field("page_size", pageSize)
             .log();
 
-        List<AlertResponse> results = alertService.getAlerts(workloadName, namespace)
-            .stream()
-            .map(AlertResponse::from)
-            .toList();
+        Alert.Filter filter = new Alert.Filter(workloadName, namespace, null);
+        PageResult<Alert> result = alertService.listAlerts(filter, PageRequest.of(page, pageSize));
+
+        PageResult<AlertResponse> response = PageResult.of(
+            result.items().stream().map(AlertResponse::from).toList(),
+            result.page(),
+            result.pageSize(),
+            result.total()
+        );
 
         log.info(LogMessages.Alert.ALERTS_GET_FOUND)
-            .field("count", results.size())
-            .field("workload_name", workloadName)
-            .field("namespace", namespace)
+            .field("count", result.items().size())
+            .field("total", result.total())
+            .field("page", result.page())
             .log();
 
-        return Response.ok(results).build();
+        return Response.ok(response).build();
     }
 
     @POST

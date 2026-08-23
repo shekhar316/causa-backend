@@ -8,24 +8,28 @@ import com.causa.common.logging.CausaLogger;
 import com.causa.common.logging.LogMessages;
 import com.causa.core.domain.Alert;
 import com.causa.core.domain.Diagnostic;
+import com.causa.core.domain.PageRequest;
+import com.causa.core.domain.PageResult;
 import com.causa.core.ports.AlertRepository;
 import com.causa.core.services.DiagnosticService;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 /**
  * Diagnostics Controller
  *
- * <p>GET /api/v1/diagnostics        — list all diagnostics (summary)
+ * <p>GET /api/v1/diagnostics        — paginated list of diagnostics (summary)
  * <p>GET /api/v1/diagnostics/{id}   — full diagnostic detail
  *
  * @since 0.0.1
@@ -54,24 +58,46 @@ public class DiagnosticsController {
     // GET /api/v1/diagnostics
     // -------------------------------------------------------------------------
 
+    /**
+     * Returns a paginated list of diagnostic summaries ordered by creation time descending.
+     *
+     * <p>Alerts for the current page are batch-loaded in a single query to avoid N+1.
+     */
     @GET
-    public Response listDiagnostics() {
-        log.info(LogMessages.Diagnostic.DIAGNOSTICS_LIST_REQUEST).log();
+    public Response listDiagnostics(
+            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE)      @DefaultValue("1") int page,
+            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE_SIZE) @DefaultValue("0") int pageSize) {
 
-        List<Diagnostic> diagnostics = diagnosticService.listDiagnostics();
-
-        List<DiagnosticListItemResponse> items = diagnostics.stream()
-            .map(d -> {
-                Alert alert = alertRepository.findById(d.getAlertId()).orElse(null);
-                return DiagnosticListItemResponse.from(d, alert, clusterName);
-            })
-            .toList();
-
-        log.info(LogMessages.Diagnostic.DIAGNOSTICS_LIST_RETURNED)
-            .field("count", items.size())
+        log.info(LogMessages.Diagnostic.DIAGNOSTICS_LIST_REQUEST)
+            .field("page", page)
+            .field("page_size", pageSize)
             .log();
 
-        return Response.ok(items).build();
+        PageResult<Diagnostic> result = diagnosticService.listDiagnostics(PageRequest.of(page, pageSize));
+
+        // Batch-load alerts for this page only — eliminates N+1
+        List<String> alertIds = result.items().stream()
+            .map(Diagnostic::getAlertId)
+            .distinct()
+            .toList();
+        Map<String, Alert> alertsById = alertRepository.findByIds(alertIds);
+
+        PageResult<DiagnosticListItemResponse> response = PageResult.of(
+            result.items().stream()
+                .map(d -> DiagnosticListItemResponse.from(d, alertsById.get(d.getAlertId()), clusterName))
+                .toList(),
+            result.page(),
+            result.pageSize(),
+            result.total()
+        );
+
+        log.info(LogMessages.Diagnostic.DIAGNOSTICS_LIST_RETURNED)
+            .field("count", result.items().size())
+            .field("total", result.total())
+            .field("page", result.page())
+            .log();
+
+        return Response.ok(response).build();
     }
 
     // -------------------------------------------------------------------------
@@ -87,24 +113,21 @@ public class DiagnosticsController {
             .field("diagnosticId", diagnosticId)
             .log();
 
-        Optional<Diagnostic> found = diagnosticService.getDiagnosticById(diagnosticId);
-
-        if (found.isEmpty()) {
-            log.warn(LogMessages.Diagnostic.DIAGNOSTIC_GET_NOT_FOUND)
-                .field("diagnosticId", diagnosticId)
-                .log();
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(ErrorResponse.of(404, "Not Found", "No diagnostic found with id: " + diagnosticId))
-                .build();
-        }
-
-        Diagnostic diagnostic = found.get();
-        Alert alert = alertRepository.findById(diagnostic.getAlertId()).orElse(null);
-
-        log.info(LogMessages.Diagnostic.DIAGNOSTIC_GET_FOUND)
-            .field("diagnosticId", diagnosticId)
-            .log();
-
-        return Response.ok(DiagnosticDetailResponse.from(diagnostic, alert, clusterName)).build();
+        return diagnosticService.getDiagnosticById(diagnosticId)
+            .map(diagnostic -> {
+                Alert alert = alertRepository.findById(diagnostic.getAlertId()).orElse(null);
+                log.info(LogMessages.Diagnostic.DIAGNOSTIC_GET_FOUND)
+                    .field("diagnosticId", diagnosticId)
+                    .log();
+                return Response.ok(DiagnosticDetailResponse.from(diagnostic, alert, clusterName)).build();
+            })
+            .orElseGet(() -> {
+                log.warn(LogMessages.Diagnostic.DIAGNOSTIC_GET_NOT_FOUND)
+                    .field("diagnosticId", diagnosticId)
+                    .log();
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(ErrorResponse.of(404, "Not Found", "No diagnostic found with id: " + diagnosticId))
+                    .build();
+            });
     }
 }

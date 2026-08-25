@@ -128,14 +128,6 @@ causa:
       skills-dir: ${LLM_SKILLS_DIR:}
     google-application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
 
-
-  # API Configuration
-  api:
-    pagination:
-      # Default number of items returned per page when page_size query param is omitted.
-      default-page-size: ${CAUSA_API_PAGE_SIZE:20}
-      # Hard upper cap — requests above this are rejected with HTTP 400.
-      max-page-size: ${CAUSA_API_MAX_PAGE_SIZE:100}
   # Validation Configuration
   validation:
     assertion-analyzer:

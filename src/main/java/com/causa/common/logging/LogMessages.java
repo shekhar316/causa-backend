@@ -52,7 +52,7 @@ public final class LogMessages {
         public static final String BOB_SHELL_AVAILABLE = "BOB Shell is available and ready";
         public static final String BOB_SHELL_NOT_AVAILABLE = "BOB Shell is not available";
         public static final String BOB_SHELL_FAILED = "BOB Shell failed";
-        public static final String BOB_OUTPUT_MARKERS_NOT_FOUND = "Could not find ---output--- markers in BOB Shell response";
+        public static final String BOB_JSON_PARSE_FAILED = "Failed to parse JSON response from BOB Shell";
         public static final String BOB_EXTRACTED_TOKEN_USAGE = "Extracted token usage from BOB Shell";
         public static final String BOB_STATS_FIELD_NOT_FOUND = "Stats field not found in BOB Shell output";
         public static final String BOB_STATS_BLOCK_NOT_FOUND = "Could not find statistics block in BOB Shell output";
@@ -109,6 +109,9 @@ public final class LogMessages {
         public static final String MCP_FILESYSTEM_CHECK_STARTED = "MCP Filesystem health check started";
         public static final String MCP_FILESYSTEM_CHECK_PASSED = "MCP Filesystem health check passed";
         public static final String MCP_FILESYSTEM_CHECK_FAILED = "MCP Filesystem health check failed";
+        public static final String MCP_QUARKUS_CHECK_STARTED = "MCP Quarkus health check started";
+        public static final String MCP_QUARKUS_CHECK_PASSED = "MCP Quarkus health check passed";
+        public static final String MCP_QUARKUS_CHECK_FAILED = "MCP Quarkus health check failed";
         public static final String LLM_CHECK_STARTED = "LLM health check started";
         public static final String LLM_CHECK_PASSED = "LLM health check passed";
         public static final String LLM_CHECK_FAILED = "LLM health check failed";
@@ -132,9 +135,11 @@ public final class LogMessages {
         public static final String ALERT_PERSISTED = "Alert persisted to database";
 
         // Alerts API
-        public static final String ALERTS_GET_REQUEST   = "GET /api/v1/alerts request received";
-        public static final String ALERTS_GET_FOUND     = "Alert(s) retrieved successfully";
-        public static final String ALERTS_GET_NOT_FOUND = "Alert not found";
+        public static final String ALERTS_GET_REQUEST      = "GET /api/v1/alerts request received";
+        public static final String ALERTS_GET_FOUND        = "Alert(s) retrieved successfully";
+        public static final String ALERTS_GET_NOT_FOUND    = "Alert not found";
+        public static final String ALERTS_TRIGGER_REQUEST  = "POST /api/v1/alerts manual trigger request received";
+        public static final String ALERTS_TRIGGER_ACCEPTED = "Manual alert trigger accepted";
 
         // Exception messages
         public static final String ALERT_PERSIST_FAILED = "Failed to persist alert";
@@ -181,6 +186,7 @@ public final class LogMessages {
         public static final String DIAGNOSTIC_GET_REQUEST    = "GET /api/v1/diagnostics/{id} request received";
         public static final String DIAGNOSTIC_GET_FOUND      = "Diagnostic retrieved successfully";
         public static final String DIAGNOSTIC_GET_NOT_FOUND  = "Diagnostic not found";
+
     }
 
     /**
@@ -201,6 +207,9 @@ public final class LogMessages {
         public static final String MCP_KRUIZE_COST_RECOMMENDATIONS = "Kruize cost recommendations retrieved";
         public static final String MCP_KRUIZE_PERF_RECOMMENDATIONS = "Kruize performance recommendations retrieved";
         public static final String MCP_KRUIZE_SKIPPED_NO_CONTAINER = "Skipping Kruize MCP calls - no container name available";
+
+        // Quarkus MCP
+        public static final String MCP_QUARKUS_RAW_METRICS = "Quarkus raw metrics retrieved";
 
         // Cryostat MCP
         public static final String MCP_CRYOSTAT_GC_ANALYSIS = "Cryostat GC analysis retrieved";
@@ -292,6 +301,15 @@ public final class LogMessages {
         public static final String VALIDATION_DATA_UNAVAILABLE = "Validation data not available for diagnostic";
         public static final String VALIDATION_DATA_PARSE_FAILED = "Failed to parse validation data";
         public static final String DIAGNOSTIC_NOT_FOUND = "Diagnostic not found";
+
+        // LLM Assertion Analyzer
+        public static final String ASSERTION_ANALYZING = "Analyzing assertion with LLM";
+        public static final String ASSERTION_ANALYSIS_COMPLETED = "LLM assertion analysis completed";
+        public static final String ASSERTION_ANALYSIS_FAILED = "LLM assertion analysis failed";
+        public static final String ASSERTION_BATCH_START = "Analyzing all assertions with LLM in parallel";
+        public static final String ASSERTION_BATCH_COMPLETED = "Batch analysis completed";
+        public static final String ASSERTION_SKIP_RECOMMENDATION = "Recommendations are not validated against evidence";
+        public static final String ASSERTION_NO_JSON = "No JSON object found in LLM response";
     }
 
     /**

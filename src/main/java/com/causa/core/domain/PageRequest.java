@@ -4,9 +4,9 @@ package com.causa.core.domain;
  * Pagination request value object.
  *
  * <p>Pure value carrier — no defaults or caps live here. The default page size
- * and max page size cap are configured in {@code application.yml} under
- * {@code causa.api.pagination.*} and resolved by the service layer before
- * constructing this record.
+ * and max page size cap are defined as constants in
+ * {@link com.causa.common.constants.ApiConstants.Paths.Pagination} and resolved
+ * by the service layer before constructing this record.
  *
  * <p>Page index is <strong>1-based</strong> externally (matching the API contract).
  * Use {@link #panachePage()} to obtain the 0-based index required by Panache.

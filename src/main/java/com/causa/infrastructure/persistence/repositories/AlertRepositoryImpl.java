@@ -120,7 +120,7 @@ public class AlertRepositoryImpl implements AlertRepository {
         }
 
         String where  = clauses.isEmpty() ? "" : " WHERE " + String.join(" AND ", clauses);
-        int    offset = pageRequest.panachePage() * pageRequest.size();
+        int    offset = Math.multiplyExact(pageRequest.panachePage(), pageRequest.size());
 
         // Data query — fixed ORDER BY, LIMIT/OFFSET for pagination
         String dataSql = "SELECT * FROM alerts" + where

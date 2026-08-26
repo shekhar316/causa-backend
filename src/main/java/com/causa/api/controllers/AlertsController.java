@@ -111,7 +111,7 @@ public class AlertsController {
             @QueryParam(ApiConstants.Paths.Alerts.QUERY_WORKLOAD)          String workloadName,
             @QueryParam(ApiConstants.Paths.Alerts.QUERY_NAMESPACE)         String namespace,
             @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE)          @DefaultValue("1")                                                  int page,
-            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE_SIZE)     @DefaultValue(ApiConstants.Paths.Pagination.DEFAULT_PAGE_SIZE_STRING) int pageSize) {
+            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE_SIZE)     @DefaultValue(ApiConstants.Paths.Pagination.DEFAULT_PAGE_SIZE) int pageSize) {
 
         log.info(LogMessages.Alert.ALERTS_GET_REQUEST)
             .field("workload_name", workloadName)

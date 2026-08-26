@@ -24,6 +24,7 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Diagnostics Controller
@@ -105,21 +106,24 @@ public class DiagnosticsController {
             .field("diagnosticId", diagnosticId)
             .log();
 
-        return diagnosticService.getDiagnosticById(diagnosticId)
-            .map(diagnostic -> {
-                Alert alert = alertRepository.findById(diagnostic.getAlertId()).orElse(null);
-                log.info(LogMessages.Diagnostic.DIAGNOSTIC_GET_FOUND)
-                    .field("diagnosticId", diagnosticId)
-                    .log();
-                return Response.ok(DiagnosticDetailResponse.from(diagnostic, alert, clusterName)).build();
-            })
-            .orElseGet(() -> {
-                log.warn(LogMessages.Diagnostic.DIAGNOSTIC_GET_NOT_FOUND)
-                    .field("diagnosticId", diagnosticId)
-                    .log();
-                return Response.status(Response.Status.NOT_FOUND)
-                    .entity(ErrorResponse.of(404, "Not Found", "No diagnostic found with id: " + diagnosticId))
-                    .build();
-            });
+        Optional<Diagnostic> found = diagnosticService.getDiagnosticById(diagnosticId);
+
+        if (found.isEmpty()) {
+            log.warn(LogMessages.Diagnostic.DIAGNOSTIC_GET_NOT_FOUND)
+                .field("diagnosticId", diagnosticId)
+                .log();
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(ErrorResponse.of(404, "Not Found", "No diagnostic found with id: " + diagnosticId))
+                .build();
+        }
+
+        Diagnostic diagnostic = found.get();
+        Alert alert = alertRepository.findById(diagnostic.getAlertId()).orElse(null);
+
+        log.info(LogMessages.Diagnostic.DIAGNOSTIC_GET_FOUND)
+            .field("diagnosticId", diagnosticId)
+            .log();
+
+        return Response.ok(DiagnosticDetailResponse.from(diagnostic, alert, clusterName)).build();
     }
 }

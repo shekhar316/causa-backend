@@ -22,12 +22,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -87,7 +86,6 @@ class DiagnosticsControllerTest {
         void shouldReturn200WithEmptyList() {
             PageResult<Diagnostic> page = PageResult.of(List.of(), 0L, PageRequest.of(1, 20));
             when(diagnosticService.listDiagnostics(any())).thenReturn(page);
-            when(alertRepository.findByIds(anyList())).thenReturn(Map.of());
 
             Response response = controller.listDiagnostics(1, 20);
 
@@ -108,7 +106,8 @@ class DiagnosticsControllerTest {
 
             Alert a1 = buildAlert("alert-1");
             Alert a2 = buildAlert("alert-2");
-            when(alertRepository.findByIds(anyList())).thenReturn(Map.of("alert-1", a1, "alert-2", a2));
+            when(alertRepository.findById("alert-1")).thenReturn(Optional.of(a1));
+            when(alertRepository.findById("alert-2")).thenReturn(Optional.of(a2));
 
             Response response = controller.listDiagnostics(1, 20);
 
@@ -125,7 +124,7 @@ class DiagnosticsControllerTest {
             Diagnostic d1 = buildDiagnostic("diag-1", "alert-orphan");
             PageResult<Diagnostic> page = PageResult.of(List.of(d1), 1L, PageRequest.of(1, 20));
             when(diagnosticService.listDiagnostics(any())).thenReturn(page);
-            when(alertRepository.findByIds(anyList())).thenReturn(Map.of());
+            when(alertRepository.findById("alert-orphan")).thenReturn(Optional.empty());
 
             Response response = controller.listDiagnostics(1, 20);
 
@@ -138,18 +137,18 @@ class DiagnosticsControllerTest {
         }
 
         @Test
-        @DisplayName("Should batch-load alerts for the page")
-        void shouldBatchLoadAlertsForPage() {
+        @DisplayName("Should lookup alert for each diagnostic")
+        void shouldLookupAlertForEachDiagnostic() {
             Diagnostic d1 = buildDiagnostic("diag-1", "alert-1");
             Diagnostic d2 = buildDiagnostic("diag-2", "alert-2");
             PageResult<Diagnostic> page = PageResult.of(List.of(d1, d2), 2L, PageRequest.of(1, 20));
             when(diagnosticService.listDiagnostics(any())).thenReturn(page);
-            when(alertRepository.findByIds(anyList())).thenReturn(Map.of());
+            when(alertRepository.findById(anyString())).thenReturn(Optional.empty());
 
             controller.listDiagnostics(1, 20);
 
-            verify(alertRepository).findByIds(anyList());
-            verify(alertRepository, never()).findById(any());
+            verify(alertRepository).findById("alert-1");
+            verify(alertRepository).findById("alert-2");
         }
     }
 

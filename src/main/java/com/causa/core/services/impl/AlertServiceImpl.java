@@ -1,5 +1,6 @@
 package com.causa.core.services.impl;
 
+import com.causa.common.constants.ApiConstants;
 import com.causa.common.constants.AlertConstants.AlertSeverity;
 import com.causa.common.exceptions.InvalidPaginationException;
 import com.causa.common.logging.CausaLogger;
@@ -14,7 +15,6 @@ import io.quarkus.scheduler.Scheduled;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -43,12 +43,6 @@ public class AlertServiceImpl implements AlertService {
 
     private AlertSeverity minimumSeverity;
     private Set<String> ignoredNamespaces;
-
-    @ConfigProperty(name = "causa.api.pagination.default-page-size", defaultValue = "20")
-    int defaultPageSize;
-
-    @ConfigProperty(name = "causa.api.pagination.max-page-size", defaultValue = "100")
-    int maxPageSize;
 
     @Inject
     public AlertServiceImpl(AppConfig appConfig, AlertRepository alertRepository) {
@@ -156,10 +150,10 @@ public class AlertServiceImpl implements AlertService {
 
     @Override
     public PageResult<Alert> listAlerts(Alert.Filter filter, PageRequest pageRequest) {
-        int size = pageRequest.size() <= 0 ? defaultPageSize : pageRequest.size();
-        if (size > maxPageSize) {
+        int size = pageRequest.size() <= 0 ? ApiConstants.Paths.Pagination.DEFAULT_PAGE_SIZE : pageRequest.size();
+        if (size > ApiConstants.Paths.Pagination.MAX_PAGE_SIZE) {
             throw new InvalidPaginationException(
-                "page_size must be between 1 and " + maxPageSize);
+                "page_size must be between 1 and " + ApiConstants.Paths.Pagination.MAX_PAGE_SIZE);
         }
         int page = pageRequest.page() <= 0 ? 1 : pageRequest.page();
         return alertRepository.search(filter, PageRequest.of(page, size));

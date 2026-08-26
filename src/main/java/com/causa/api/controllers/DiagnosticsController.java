@@ -65,8 +65,8 @@ public class DiagnosticsController {
      */
     @GET
     public Response listDiagnostics(
-            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE)      @DefaultValue("1") int page,
-            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE_SIZE) @DefaultValue("0") int pageSize) {
+            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE)      @DefaultValue("1")                                              int page,
+            @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE_SIZE) @DefaultValue(ApiConstants.Paths.Pagination.DEFAULT_PAGE_SIZE_STRING) int pageSize) {
 
         log.info(LogMessages.Diagnostic.DIAGNOSTICS_LIST_REQUEST)
             .field("page", page)

@@ -24,7 +24,6 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Diagnostics Controller
@@ -58,11 +57,6 @@ public class DiagnosticsController {
     // GET /api/v1/diagnostics
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns a paginated list of diagnostic summaries ordered by creation time descending.
-     *
-     * <p>Alerts for the current page are batch-loaded in a single query to avoid N+1.
-     */
     @GET
     public Response listDiagnostics(
             @QueryParam(ApiConstants.Paths.Pagination.QUERY_PAGE)      @DefaultValue("1")                                              int page,
@@ -75,24 +69,22 @@ public class DiagnosticsController {
 
         PageResult<Diagnostic> result = diagnosticService.listDiagnostics(PageRequest.of(page, pageSize));
 
-        // Batch-load alerts for this page only — eliminates N+1
-        List<String> alertIds = result.items().stream()
-            .map(Diagnostic::getAlertId)
-            .distinct()
+        List<DiagnosticListItemResponse> items = result.items().stream()
+            .map(d -> {
+                Alert alert = alertRepository.findById(d.getAlertId()).orElse(null);
+                return DiagnosticListItemResponse.from(d, alert, clusterName);
+            })
             .toList();
-        Map<String, Alert> alertsById = alertRepository.findByIds(alertIds);
 
         PageResult<DiagnosticListItemResponse> response = PageResult.of(
-            result.items().stream()
-                .map(d -> DiagnosticListItemResponse.from(d, alertsById.get(d.getAlertId()), clusterName))
-                .toList(),
+            items,
             result.page(),
             result.pageSize(),
             result.total()
         );
 
         log.info(LogMessages.Diagnostic.DIAGNOSTICS_LIST_RETURNED)
-            .field("count", result.items().size())
+            .field("count", items.size())
             .field("total", result.total())
             .field("page", result.page())
             .log();

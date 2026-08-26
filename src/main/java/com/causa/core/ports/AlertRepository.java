@@ -4,8 +4,6 @@ import com.causa.core.domain.Alert;
 import com.causa.core.domain.PageRequest;
 import com.causa.core.domain.PageResult;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -34,13 +32,4 @@ public interface AlertRepository {
      * @return a paginated result containing matching alerts and total count
      */
     PageResult<Alert> search(Alert.Filter filter, PageRequest pageRequest);
-
-    /**
-     * Batch-loads alerts by their IDs. Used to avoid N+1 queries in the
-     * diagnostics list endpoint.
-     *
-     * @param ids list of alert IDs to load
-     * @return map of alertId → Alert for every ID that was found
-     */
-    Map<String, Alert> findByIds(List<String> ids);
 }

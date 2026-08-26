@@ -14,11 +14,8 @@ import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Alert Repository Implementation
@@ -152,22 +149,6 @@ public class AlertRepositoryImpl implements AlertRepository {
         long total = ((Number) countQ.getSingleResult()).longValue();
 
         return PageResult.of(items, total, pageRequest);
-    }
-
-    /**
-     * Batch-loads alerts by ID — used by the diagnostics list endpoint to avoid N+1.
-     * Returns an empty map when {@code ids} is null or empty.
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public Map<String, Alert> findByIds(List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return AlertEntity.<AlertEntity>list("id in ?1", ids)
-            .stream()
-            .map(AlertEntityMapper::toDomain)
-            .collect(Collectors.toMap(Alert::getAlertId, a -> a));
     }
 
     private static boolean isBlank(String s) {

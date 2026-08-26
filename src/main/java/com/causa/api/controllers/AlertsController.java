@@ -61,15 +61,15 @@ public class AlertsController {
     /**
      * GET /api/v1/alerts/{id}
      *
-     * <p>Returns a single alert by its ID. Rejects the request with 400 if any
-     * list-only query params ({@code workload_name}, {@code namespace}) are also supplied.
+     * <p>Returns a single alert by its ID. If {@code workload_name} or {@code namespace}
+     * query params are also present, the request is rejected with 400.
      */
     @GET
     @Path(ApiConstants.Paths.Alerts.BY_ID)
     public Response getAlertById(
-            @PathParam(ApiConstants.Paths.Alerts.PATH_PARAM_ID)    String id,
-            @QueryParam(ApiConstants.Paths.Alerts.QUERY_WORKLOAD)  String workloadName,
-            @QueryParam(ApiConstants.Paths.Alerts.QUERY_NAMESPACE) String namespace) {
+            @PathParam(ApiConstants.Paths.Alerts.PATH_PARAM_ID)        String id,
+            @QueryParam(ApiConstants.Paths.Alerts.QUERY_WORKLOAD)      String workloadName,
+            @QueryParam(ApiConstants.Paths.Alerts.QUERY_NAMESPACE)     String namespace) {
 
         log.info(LogMessages.Alert.ALERTS_GET_REQUEST)
             .field("id", id)

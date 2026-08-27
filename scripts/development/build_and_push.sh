@@ -13,11 +13,12 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Build and push Docker images for causa-backend with multi-architecture support"
+    echo "Uses podman buildx + Dockerfile.jvm for multi-arch builds (amd64 + arm64)."
     echo ""
     echo "Options:"
     echo "  -i IMAGE_NAME    Full image name (registry/repository:tag)"
     echo "  -r REGISTRY      Container registry (default: quay.io)"
-    echo "  -n REPO_NAME     Repository name (default: causa/causa-backend)"
+    echo "  -n REPO_NAME     Repository name (default: rh-ee-shesaxen/causa-backend)"
     echo "  -t TAG           Image tag (default: version from pom.xml) - used only if -i is not provided"
     echo "  -b BUILD         Build image true/false (default: true)"
     echo "  -p PUSH          Push image true/false (default: false)"
@@ -111,8 +112,8 @@ resolve_app_version() {
 
 # Default values from environment or hardcoded defaults
 REGISTRY="${REGISTRY:-quay.io}"
-REPO_NAME="${REPO_NAME:-causa/causa-backend}"
-IMAGE_TAG="${IMAGE_TAG:-$(resolve_app_version)}"
+REPO_NAME="${REPO_NAME:-rh-ee-shesaxen/causa-backend}"
+IMAGE_TAG="${IMAGE_TAG:-mvp_demo_2808260130}"
 BUILD_IMAGE="${BUILD_IMAGE:-true}"
 PUSH_IMAGE="${PUSH_IMAGE:-false}"
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
@@ -183,6 +184,18 @@ if [ ! -f "${PROJECT_ROOT}/mvnw" ]; then
     exit 1
 fi
 
+# Check for podman (required for multi-arch build)
+if ! command -v podman &>/dev/null; then
+    print_error "podman is not installed or not on PATH. Multi-arch builds require podman."
+    exit 1
+fi
+
+DOCKERFILE="${PROJECT_ROOT}/src/main/docker/Dockerfile.jvm"
+if [ ! -f "${DOCKERFILE}" ]; then
+    print_error "Dockerfile not found at ${DOCKERFILE}."
+    exit 1
+fi
+
 # Run all Maven commands from the project root
 cd "${PROJECT_ROOT}"
 
@@ -198,6 +211,7 @@ print_info "Push:            ${PUSH_IMAGE}"
 print_info "Platforms:       ${PLATFORMS}"
 print_info "Clean Build:     ${CLEAN_BUILD}"
 print_info "Skip Tests:      ${SKIP_TESTS}"
+print_info "Dockerfile:      ${DOCKERFILE}"
 echo ""
 
 # Warn if pushing is enabled
@@ -207,54 +221,68 @@ if [ "$PUSH_IMAGE" = "true" ]; then
     echo ""
 fi
 
-# Build Maven command
+# ── Step 1: Maven package (compile + package only, no container build) ────────
 MAVEN_CMD="./mvnw"
 
-# Add clean if requested
 if [ "$CLEAN_BUILD" = "true" ]; then
     MAVEN_CMD="${MAVEN_CMD} clean"
 fi
 
-# Add package goal
-MAVEN_CMD="${MAVEN_CMD} package"
+MAVEN_CMD="${MAVEN_CMD} package -Dquarkus.container-image.build=false"
 
-# Add skip tests if requested
 if [ "$SKIP_TESTS" = "true" ]; then
     MAVEN_CMD="${MAVEN_CMD} -DskipTests"
 fi
 
-# Add Quarkus container image properties
-MAVEN_CMD="${MAVEN_CMD} -Dquarkus.container-image.build=${BUILD_IMAGE}"
-MAVEN_CMD="${MAVEN_CMD} -Dquarkus.container-image.image=${IMAGE_NAME}"
-MAVEN_CMD="${MAVEN_CMD} -Dquarkus.container-image.push=${PUSH_IMAGE}"
-MAVEN_CMD="${MAVEN_CMD} -Dquarkus.jib.platforms=${PLATFORMS}"
-
-# Display the command
-print_info "Executing Maven command:"
-echo "${MAVEN_CMD}"
+print_info "Step 1/2 — Maven package"
+print_info "Executing: ${MAVEN_CMD}"
 echo ""
+eval "${MAVEN_CMD}"
 
-# Execute the build
-print_info "Starting build process..."
-if eval "${MAVEN_CMD}"; then
+# ── Step 2: podman buildx multi-arch build (and optional push) ────────────────
+if [ "$BUILD_IMAGE" = "true" ]; then
     echo ""
-    print_info "=== Build Summary ==="
-    print_info "✓ Build completed successfully"
-    print_info "Image: ${IMAGE_NAME}"
-    print_info "Platforms: ${PLATFORMS}"
-    
+    print_info "Step 2/2 — podman buildx multi-arch image build"
+
+    # Convert comma-separated platforms to the format podman expects (already correct)
+    PODMAN_PLATFORMS="${PLATFORMS}"
+
+    # Manifest name is the full image name; podman buildx will create/replace it.
+    MANIFEST_NAME="${IMAGE_NAME}"
+
+    # Remove any stale local manifest with the same name so podman doesn't error.
+    podman manifest rm "${MANIFEST_NAME}" 2>/dev/null || true
+
+    PODMAN_CMD="podman buildx build"
+    PODMAN_CMD="${PODMAN_CMD} --platform ${PODMAN_PLATFORMS}"
+    PODMAN_CMD="${PODMAN_CMD} --manifest ${MANIFEST_NAME}"
+    PODMAN_CMD="${PODMAN_CMD} -f ${DOCKERFILE}"
+    PODMAN_CMD="${PODMAN_CMD} ${PROJECT_ROOT}"
+
+    print_info "Executing: ${PODMAN_CMD}"
+    echo ""
+    eval "${PODMAN_CMD}"
+
+    if [ "$PUSH_IMAGE" = "true" ]; then
+        echo ""
+        print_info "Pushing multi-arch manifest to registry..."
+        podman manifest push --all "${MANIFEST_NAME}" "docker://${MANIFEST_NAME}"
+    fi
+fi
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo ""
+print_info "=== Build Summary ==="
+print_info "✓ Maven package completed successfully"
+
+if [ "$BUILD_IMAGE" = "true" ]; then
+    print_info "✓ Multi-arch image built: ${IMAGE_NAME}"
+    print_info "  Platforms: ${PLATFORMS}"
+
     if [ "$PUSH_IMAGE" = "true" ]; then
         print_info "✓ Image pushed to registry"
     else
         print_warn "Image was built but not pushed (PUSH_IMAGE=false)"
     fi
-    echo ""
-    exit 0
-else
-    echo ""
-    print_error "=== Build Failed ==="
-    print_error "Build process failed. Check the logs above for details."
-    echo ""
-    exit 1
 fi
-
+echo ""

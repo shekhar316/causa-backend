@@ -81,6 +81,20 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Trap to print a failure banner on any unexpected non-zero exit.
+# Works with `set -e` — fires whenever the script aborts early.
+on_exit() {
+    local code=$?
+    if [ $code -ne 0 ]; then
+        echo ""
+        print_error "=== Build Failed ==="
+        print_error "Build process failed. Check the logs above for details."
+        echo ""
+    fi
+    exit $code
+}
+trap on_exit EXIT
+
 # Resolve the project root pom.xml relative to this script's location,
 # regardless of the working directory the script is invoked from.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

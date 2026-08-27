@@ -18,7 +18,7 @@ usage() {
     echo "Options:"
     echo "  -i IMAGE_NAME    Full image name (registry/repository:tag)"
     echo "  -r REGISTRY      Container registry (default: quay.io)"
-    echo "  -n REPO_NAME     Repository name (default: rh-ee-shesaxen/causa-backend)"
+    echo "  -n REPO_NAME     Repository name (default: causa-ai-hub/causa-backend)"
     echo "  -t TAG           Image tag (default: version from pom.xml) - used only if -i is not provided"
     echo "  -b BUILD         Build image true/false (default: true)"
     echo "  -p PUSH          Push image true/false (default: false)"
@@ -112,8 +112,8 @@ resolve_app_version() {
 
 # Default values from environment or hardcoded defaults
 REGISTRY="${REGISTRY:-quay.io}"
-REPO_NAME="${REPO_NAME:-rh-ee-shesaxen/causa-backend}"
-IMAGE_TAG="${IMAGE_TAG:-mvp_demo_2808260130}"
+REPO_NAME="${REPO_NAME:-causa-ai-hub/causa-backend}"
+IMAGE_TAG="${IMAGE_TAG:-$(resolve_app_version)}"
 BUILD_IMAGE="${BUILD_IMAGE:-true}"
 PUSH_IMAGE="${PUSH_IMAGE:-false}"
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
@@ -221,15 +221,17 @@ if [ "$PUSH_IMAGE" = "true" ]; then
     echo ""
 fi
 
-# ── Step 1: Maven package (compile + package only, no container build) ────────
+# Build Maven command
 MAVEN_CMD="./mvnw"
 
+# Add clean if requested
 if [ "$CLEAN_BUILD" = "true" ]; then
     MAVEN_CMD="${MAVEN_CMD} clean"
 fi
 
 MAVEN_CMD="${MAVEN_CMD} package -Dquarkus.container-image.build=false"
 
+# Add skip tests if requested
 if [ "$SKIP_TESTS" = "true" ]; then
     MAVEN_CMD="${MAVEN_CMD} -DskipTests"
 fi

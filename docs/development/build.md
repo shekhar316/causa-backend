@@ -44,7 +44,7 @@ The `scripts/development/build_and_push.sh` script provides a comprehensive solu
 |--------|-------------|---------|
 | `-i IMAGE_NAME` | Full image name (registry/repository:tag) | - |
 | `-r REGISTRY` | Container registry | `quay.io` |
-| `-n REPO_NAME` | Repository name | `causa/causa-backend` |
+| `-n REPO_NAME` | Repository name | `causa-ai-hub/causa-backend` |
 | `-t TAG` | Image tag (used if -i not provided) | `latest` |
 | `-b BUILD` | Build image (true/false) | `true` |
 | `-p PUSH` | Push image (true/false) | `false` |

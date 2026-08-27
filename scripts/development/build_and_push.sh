@@ -181,6 +181,12 @@ validate_boolean "$PUSH_IMAGE" "PUSH_IMAGE (-p)"
 validate_boolean "$CLEAN_BUILD" "CLEAN_BUILD (-c)"
 validate_boolean "$SKIP_TESTS" "SKIP_TESTS (-s)"
 
+# Reject the invalid combination: push requested but no image will be built
+if [ "$PUSH_IMAGE" = "true" ] && [ "$BUILD_IMAGE" = "false" ]; then
+    print_error "PUSH_IMAGE=true requires BUILD_IMAGE=true. Cannot push without building."
+    exit 1
+fi
+
 # If IMAGE_NAME is not provided via -i or env, construct it from components
 if [ -z "$IMAGE_NAME" ]; then
     IMAGE_NAME="${REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
@@ -198,16 +204,18 @@ if [ ! -f "${PROJECT_ROOT}/mvnw" ]; then
     exit 1
 fi
 
-# Check for podman (required for multi-arch build)
-if ! command -v podman &>/dev/null; then
-    print_error "podman is not installed or not on PATH. Multi-arch builds require podman."
-    exit 1
-fi
-
 DOCKERFILE="${PROJECT_ROOT}/src/main/docker/Dockerfile.jvm"
-if [ ! -f "${DOCKERFILE}" ]; then
-    print_error "Dockerfile not found at ${DOCKERFILE}."
-    exit 1
+
+# Podman and Dockerfile are only required when actually building an image
+if [ "$BUILD_IMAGE" = "true" ]; then
+    if ! command -v podman &>/dev/null; then
+        print_error "podman is not installed or not on PATH. Multi-arch builds require podman."
+        exit 1
+    fi
+    if [ ! -f "${DOCKERFILE}" ]; then
+        print_error "Dockerfile not found at ${DOCKERFILE}."
+        exit 1
+    fi
 fi
 
 # Run all Maven commands from the project root
@@ -225,7 +233,9 @@ print_info "Push:            ${PUSH_IMAGE}"
 print_info "Platforms:       ${PLATFORMS}"
 print_info "Clean Build:     ${CLEAN_BUILD}"
 print_info "Skip Tests:      ${SKIP_TESTS}"
-print_info "Dockerfile:      ${DOCKERFILE}"
+if [ "$BUILD_IMAGE" = "true" ]; then
+    print_info "Dockerfile:      ${DOCKERFILE}"
+fi
 echo ""
 
 # Warn if pushing is enabled

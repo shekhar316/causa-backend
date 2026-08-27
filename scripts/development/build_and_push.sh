@@ -245,25 +245,25 @@ if [ "$PUSH_IMAGE" = "true" ]; then
     echo ""
 fi
 
-# Build Maven command
-MAVEN_CMD="./mvnw"
+# Build Maven command as an array so paths with spaces are handled correctly
+MAVEN_CMD=("./mvnw")
 
 # Add clean if requested
 if [ "$CLEAN_BUILD" = "true" ]; then
-    MAVEN_CMD="${MAVEN_CMD} clean"
+    MAVEN_CMD+=("clean")
 fi
 
-MAVEN_CMD="${MAVEN_CMD} package -Dquarkus.container-image.build=false"
+MAVEN_CMD+=("package" "-Dquarkus.container-image.build=false")
 
 # Add skip tests if requested
 if [ "$SKIP_TESTS" = "true" ]; then
-    MAVEN_CMD="${MAVEN_CMD} -DskipTests"
+    MAVEN_CMD+=("-DskipTests")
 fi
 
 print_info "Step 1/2 — Maven package"
-print_info "Executing: ${MAVEN_CMD}"
+print_info "Executing: ${MAVEN_CMD[*]}"
 echo ""
-eval "${MAVEN_CMD}"
+"${MAVEN_CMD[@]}"
 
 # ── Step 2: podman buildx multi-arch build (and optional push) ────────────────
 if [ "$BUILD_IMAGE" = "true" ]; then
@@ -279,15 +279,17 @@ if [ "$BUILD_IMAGE" = "true" ]; then
     # Remove any stale local manifest with the same name so podman doesn't error.
     podman manifest rm "${MANIFEST_NAME}" 2>/dev/null || true
 
-    PODMAN_CMD="podman buildx build"
-    PODMAN_CMD="${PODMAN_CMD} --platform ${PODMAN_PLATFORMS}"
-    PODMAN_CMD="${PODMAN_CMD} --manifest ${MANIFEST_NAME}"
-    PODMAN_CMD="${PODMAN_CMD} -f ${DOCKERFILE}"
-    PODMAN_CMD="${PODMAN_CMD} ${PROJECT_ROOT}"
+    PODMAN_CMD=(
+        "podman" "buildx" "build"
+        "--platform" "${PODMAN_PLATFORMS}"
+        "--manifest" "${MANIFEST_NAME}"
+        "-f" "${DOCKERFILE}"
+        "${PROJECT_ROOT}"
+    )
 
-    print_info "Executing: ${PODMAN_CMD}"
+    print_info "Executing: ${PODMAN_CMD[*]}"
     echo ""
-    eval "${PODMAN_CMD}"
+    "${PODMAN_CMD[@]}"
 
     if [ "$PUSH_IMAGE" = "true" ]; then
         echo ""

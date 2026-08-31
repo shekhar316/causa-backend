@@ -177,9 +177,9 @@ done
 
 # Validate boolean flags
 validate_boolean "$BUILD_IMAGE" "BUILD_IMAGE (-b)"
-validate_boolean "$PUSH_IMAGE" "PUSH_IMAGE (-p)"
+validate_boolean "$PUSH_IMAGE"  "PUSH_IMAGE (-p)"
 validate_boolean "$CLEAN_BUILD" "CLEAN_BUILD (-c)"
-validate_boolean "$SKIP_TESTS" "SKIP_TESTS (-s)"
+validate_boolean "$SKIP_TESTS"  "SKIP_TESTS (-s)"
 
 # Reject the invalid combination: push requested but no image will be built
 if [ "$PUSH_IMAGE" = "true" ] && [ "$BUILD_IMAGE" = "false" ]; then
@@ -210,6 +210,11 @@ DOCKERFILE="${PROJECT_ROOT}/src/main/docker/Dockerfile.jvm"
 if [ "$BUILD_IMAGE" = "true" ]; then
     if ! command -v podman &>/dev/null; then
         print_error "podman is not installed or not on PATH. Multi-arch builds require podman."
+        exit 1
+    fi
+    if ! podman buildx --help &>/dev/null 2>&1; then
+        print_error "podman buildx is not available. Upgrade podman or install the buildx plugin."
+        print_error "See: https://podman.io/getting-started/installation"
         exit 1
     fi
     if [ ! -f "${DOCKERFILE}" ]; then
@@ -245,22 +250,24 @@ if [ "$PUSH_IMAGE" = "true" ]; then
     echo ""
 fi
 
-# Build Maven command as an array so paths with spaces are handled correctly
+# ── Step 1: Maven package ─────────────────────────────────────────────────────
 MAVEN_CMD=("./mvnw")
 
-# Add clean if requested
 if [ "$CLEAN_BUILD" = "true" ]; then
     MAVEN_CMD+=("clean")
 fi
 
 MAVEN_CMD+=("package" "-Dquarkus.container-image.build=false")
 
-# Add skip tests if requested
 if [ "$SKIP_TESTS" = "true" ]; then
     MAVEN_CMD+=("-DskipTests")
 fi
 
-print_info "Step 1/2 — Maven package"
+if [ "$BUILD_IMAGE" = "true" ]; then
+    print_info "Step 1/2 — Maven package"
+else
+    print_info "Step 1/1 — Maven package"
+fi
 print_info "Executing: ${MAVEN_CMD[*]}"
 echo ""
 "${MAVEN_CMD[@]}"
@@ -268,25 +275,27 @@ echo ""
 # ── Step 2: podman buildx multi-arch build (and optional push) ────────────────
 if [ "$BUILD_IMAGE" = "true" ]; then
     echo ""
-    print_info "Step 2/2 — podman buildx multi-arch image build"
 
-    # Convert comma-separated platforms to the format podman expects (already correct)
-    PODMAN_PLATFORMS="${PLATFORMS}"
-
-    # Manifest name is the full image name; podman buildx will create/replace it.
+    # Manifest name is the full image name.
     MANIFEST_NAME="${IMAGE_NAME}"
 
-    # Remove any stale local manifest with the same name so podman doesn't error.
+    # Remove any stale local manifest with the same name so podman doesn't
+    # error on re-runs with the same image name.
     podman manifest rm "${MANIFEST_NAME}" 2>/dev/null || true
 
+    # Always use --manifest so all requested platforms are built and kept in
+    # the local manifest store — not just the host-native arch.
+    # Without a separate push step the manifest stays local and can be
+    # inspected with: podman manifest inspect <name>
     PODMAN_CMD=(
         "podman" "buildx" "build"
-        "--platform" "${PODMAN_PLATFORMS}"
+        "--platform" "${PLATFORMS}"
         "--manifest" "${MANIFEST_NAME}"
         "-f" "${DOCKERFILE}"
         "${PROJECT_ROOT}"
     )
 
+    print_info "Step 2/2 — podman buildx multi-arch image build"
     print_info "Executing: ${PODMAN_CMD[*]}"
     echo ""
     "${PODMAN_CMD[@]}"
@@ -304,13 +313,15 @@ print_info "=== Build Summary ==="
 print_info "✓ Maven package completed successfully"
 
 if [ "$BUILD_IMAGE" = "true" ]; then
-    print_info "✓ Multi-arch image built: ${IMAGE_NAME}"
-    print_info "  Platforms: ${PLATFORMS}"
-
     if [ "$PUSH_IMAGE" = "true" ]; then
-        print_info "✓ Image pushed to registry"
+        print_info "✓ Multi-arch manifest pushed: ${IMAGE_NAME}"
+        print_info "  Platforms: ${PLATFORMS}"
+        print_info "  Verify: podman manifest inspect ${IMAGE_NAME}"
     else
-        print_warn "Image was built but not pushed (PUSH_IMAGE=false)"
+        print_info "✓ Multi-arch manifest built locally: ${IMAGE_NAME}"
+        print_info "  Platforms: ${PLATFORMS}"
+        print_info "  Inspect locally: podman manifest inspect ${IMAGE_NAME}"
+        print_warn "Image not pushed (PUSH_IMAGE=false). Re-run with -p true to push."
     fi
 fi
 echo ""

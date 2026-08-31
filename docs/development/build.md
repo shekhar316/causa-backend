@@ -14,10 +14,12 @@ The `scripts/development/build_and_push.sh` script provides a comprehensive solu
 
 ## Prerequisites
 
-1. **Docker** or **Podman** installed and running
-2. **Maven** (uses Maven wrapper included in project)
-3. **Authentication** to your container registry (if pushing images)
-4. **Quarkus Container Image Jib Extension** (already configured in `pom.xml`)
+1. **Java 17+**
+2. **Maven** (uses the Maven wrapper `./mvnw` included in the project)
+3. **podman** with `buildx` support — **required when `BUILD_IMAGE=true` (the default)**
+   - Install: https://podman.io/getting-started/installation
+   - Verify: `podman buildx --help`
+4. **Authentication** to your container registry (only required when `-p true`)
 
 ## Quick Start
 
@@ -174,28 +176,17 @@ podman login ghcr.io
 
 The script performs the following steps:
 
-1. **Validation**: Checks for required files (`pom.xml`, `mvnw`)
+1. **Validation**: Checks for required tools (`podman`, `podman buildx`, `mvnw`) and the `Dockerfile.jvm`
 2. **Configuration**: Processes command-line flags and environment variables
-3. **Maven Build**: Executes Maven with Quarkus container image plugin
-4. **Image Build**: Uses Jib to build multi-architecture images
-5. **Push** (optional): Pushes images to the specified registry
+3. **Step 1 — Maven package**: Runs `./mvnw package -Dquarkus.container-image.build=false`; image building is intentionally skipped here
+4. **Step 2 — podman buildx**: Builds a multi-arch manifest using `Dockerfile.jvm` (amd64 + arm64)
+5. **Push** (optional): Pushes the manifest and all platform images via `podman manifest push --all`
 
 ### Under the Hood
 
-The script uses:
-- **Quarkus Container Image Jib Extension** for building images
-- **Maven Wrapper** (`./mvnw`) for consistent builds
-- **Jib** for multi-architecture support without Docker daemon
-- **Quarkus properties** for configuration
-
-Example Maven command generated:
-```bash
-./mvnw clean package \
-  -Dquarkus.container-image.build=true \
-  -Dquarkus.container-image.image=quay.io/rh-ee-shesaxen/causa-backend:v1.0.0 \
-  -Dquarkus.container-image.push=true \
-  -Dquarkus.jib.platforms=linux/amd64,linux/arm64
-```
+- **`Dockerfile.jvm`** at `src/main/docker/Dockerfile.jvm` — used for the actual container image
+- **podman buildx** — builds and assembles the multi-arch manifest locally
+- **Maven Wrapper** (`./mvnw`) — compiles and packages the application JAR
 
 
 
@@ -220,36 +211,10 @@ Example Maven command generated:
 - Store registry credentials securely
 - Build and push only on main/release branches
 
-## Configuration Files
-
-### pom.xml
-
-The `pom.xml` includes the Quarkus Container Image Jib extension:
-
-```xml
-<dependency>
-    <groupId>io.quarkus</groupId>
-    <artifactId>quarkus-container-image-jib</artifactId>
-</dependency>
-```
-
-### application.yml
-
-You can also configure container image settings in `src/main/resources/application.yml`:
-
-```yaml
-quarkus:
-  container-image:
-    registry: quay.io
-    group: causa
-    name: causa-backend
-    tag: latest
-```
-
 ## Related Documentation
 
+- [podman buildx Documentation](https://docs.podman.io/en/latest/markdown/podman-buildx.1.html)
 - [Quarkus Container Images Guide](https://quarkus.io/guides/container-image)
-- [Jib Documentation](https://github.com/GoogleContainerTools/jib)
 
 ## Support
 

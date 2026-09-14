@@ -1,0 +1,131 @@
+Design and implement a dynamic MCP (Model Context Protocol) configuration system for the existing Java-based Root Cause Analysis (RCA) engine. The system currently debugs memory-related issues in Java applications but is architected to support broader diagnostic use cases. Below is the full context and requirements.
+
+---
+
+**EXISTING SYSTEM OVERVIEW**
+
+The RCA engine operates as follows:
+1. Pre-configured alerts monitor Java application memory metrics.
+2. When a high-memory condition is detected, the alert manager fires an alert.
+3. The alert is received via a webhook API at `POST /api/webhook`.
+4. The webhook handler initiates a diagnostic session.
+5. The diagnostic session connects to one or more MCP servers, collects data from them, passes the collected data to an LLM, and the LLM performs root cause analysis.
+
+Currently, MCP server endpoints, health check URLs, tool names, environment types, and cluster configurations are hardcoded or read from environment variables. This must be replaced with a fully dynamic, file-driven configuration system.
+
+---
+
+**OBJECTIVE**
+
+Replace all hardcoded and environment-variable-based MCP configuration with a dynamic, file-driven MCP registry system. The configuration must be read from a mounted `mcp.json` file at application initialization time. The system must support production deployment, development mode, and future extensibility to additional AI agent frameworks and diagnostic flows.
+
+---
+
+**REQUIREMENTS**
+
+**1. mcp.json Configuration File**
+
+- NOTE: mcp.json is just a sample file, I need a json format which is supported by major AI agents without any modifications. Keep the changes generic to claude and bob. If format differs we can always add multiple JSONs. 
+- A sample `mcp.json` already exists in the `deployment/` folder. Use it as the canonical schema reference and refresh your understanding of its current structure before proceeding.
+- The file must be the single source of truth for all MCP server configuration.
+- The schema must support, at minimum, the following per MCP server entry:
+  - Server name / identifier
+  - Server URL
+  - Health check URL
+  - List of allowed tools (tool names the engine is permitted to invoke)
+  - Environment type or cluster classification (e.g., `dev`, `staging`, `production`, or cluster name)
+  - Is it a mandatory or compulsory requirement?
+  - Any transport or authentication metadata required to connect
+- The format must be compatible with or inspired by the `mcp.json` format used by major MCP-compatible platforms (e.g., IBM Bob, Bob Shell, Claude Desktop, Claude.ai, or generic MCP hosts). Make the schema as standards-aligned and meaningful as possible.
+- The file must be mountable as a volume in both Docker/Kubernetes production deployments and local development mode.
+
+**2. Application Initialization — File-Based Bootstrap**
+
+- At startup, the application must locate and load the `mcp.json` file instead of reading MCP configuration from environment variables or hardcoded values.
+- Define a clear, configurable file path resolution strategy (e.g., check an environment variable `MCP_CONFIG_PATH`, fall back to a default path such as `resources/configs/mcp.json` or `/etc/rca/mcp.json`).
+- Parse and validate the JSON at startup. Fail fast with a clear error if the file is missing, malformed, or fails schema validation.
+
+**3. MCP Registry (or MCP Factory)**
+
+- Implement a component named `McpRegistry` (or `McpFactory` — choose the name that best reflects the responsibility; justify your choice).
+- `McpRegistry` must:
+  - Accept the parsed `mcp.json` configuration at initialization.
+  - Instantiate and manage one `McpClient` per configured MCP server.
+  - Each `McpClient` must be specific to its server and capable of invoking that server's allowed tools, checking server health, and returning structured diagnostic data.
+  - Expose a method such as `McpRegistry.collectData(environment)` or `McpRegistry.collectData(context)` that:
+    - Accepts an environment type or diagnostic context.
+    - Dynamically selects all relevant MCP servers for that environment/context based on the loaded configuration.
+    - Calls each relevant MCP server in parallel or sequentially (choose and justify the approach).
+    - Aggregates all results into a single, unified diagnostic data object.
+    - Returns that aggregated object to the caller.
+- Replace all existing manual, per-server API calls in the diagnostic pipeline with a single call to `McpRegistry.collectData(...)`.
+
+**4. Supporting Data Classes**
+
+- Design and implement all necessary supporting classes to represent:
+  - The full `mcp.json` configuration model (top-level config, per-server config, tool definitions).
+  - The raw response from a single MCP server tool invocation.
+  - The aggregated diagnostic data object returned by `McpRegistry.collectData(...)`. Each entry in this object must carry: MCP server name, tool name, data type/category, and the actual data payload.
+- These classes must be clean, well-typed, and serializable.
+
+**5. Context Table — Schema Update**
+
+- The existing context table in the database must be updated to store MCP-collected diagnostic data in a structured format.
+- Add the following fields (or equivalent columns) to the context table schema:
+  - `mcp_server_name` — the name/identifier of the MCP server that produced the data
+  - `tool_name` — the specific tool invoked on that MCP server
+  - `data_type` — the category or type of the collected data
+  - `data_payload` — the actual diagnostic data (use an appropriate column type such as `JSONB` for PostgreSQL)
+- Ensure the context entity, repository, and any relevant service layers are updated to persist and retrieve data in this new format.
+- The stored context must be queryable by `mcp_server_name`, `tool_name`, and `data_type` to support future search and correlation features.
+
+**6. Development Mode Support**
+
+- The `mcp.json` file must work seamlessly in development mode, not only in production.
+- Propose and implement a clear, practical mechanism for how developers mount or reference the `mcp.json` file locally. Options to consider and evaluate:
+  - A local file path resolved via `MCP_CONFIG_PATH` environment variable set in a `.env` file or IDE run configuration.
+  - A default fallback to `src/main/resources/mcp.json` or `config/mcp.json` in the project root for dev convenience.
+  - A dev-mode profile (e.g., Spring `dev` profile) that resolves a local sample file automatically.
+- The chosen approach must not require developers to perform container mounts manually for basic local runs.
+- Document clearly how to configure the file path for both local development and production deployment.
+
+**7. Future Extensibility (Awareness Only — Not Implemented Now)**
+
+- Design the `McpRegistry`, `McpClient`, and configuration model with extensibility in mind so that the following future scenarios require minimal changes:
+  - Mounting the `mcp.json` file directly to AI agent frameworks that natively support it (e.g., Claude Desktop reads from `~/.claude/` or similar home-directory paths, Cursor, or other MCP-compatible agents).
+  - Supporting multiple simultaneous diagnostic flows, each with its own `mcp.json` or subset of the global one.
+  - Adding new MCP servers or tools without code changes — purely by updating `mcp.json`.
+- You do not need to implement these scenarios now. However, do not make architectural decisions that would prevent or complicate them.
+
+---
+
+**DELIVERABLES**
+
+Provide the following:
+
+1. **Schema design** for `mcp.json` — a well-structured, annotated example with explanation of each field, aligned with standard MCP conventions where applicable.
+2. **File path resolution strategy** — code and configuration for locating `mcp.json` at startup across dev and production environments.
+3. **`McpRegistry` implementation** — full implementation including initialization, `McpClient` instantiation per server, and `collectData(...)` method.
+4. **`McpClient` implementation** — per-server client capable of health checks and tool invocations using configuration from `mcp.json`.
+5. **Supporting data/model classes** — all DTOs, configuration models, and aggregated result types.
+6. **Updated context table schema** — SQL migration script and updated JPA entity, repository, and service layer changes.
+7. **Integration update** — show the exact change in the diagnostic pipeline where manual MCP API calls are replaced with `McpRegistry.collectData(...)`.
+8. **Dev mode documentation** — clear instructions for how to run the system locally with `mcp.json` without container mounts.
+9. **Brief architectural justification** — explain key design decisions: `McpRegistry` vs `McpFactory` naming, sequential vs parallel data collection, file path resolution approach, and schema design choices.
+
+---
+
+**CONSTRAINTS**
+
+- The existing webhook flow (`POST /api/webhook` → diagnostic initiation → LLM analysis) must continue to function without behavioral changes; only the internal MCP wiring changes.
+- Do not introduce breaking changes to the existing alert model, LLM integration, or webhook handler contract.
+- Use the existing technology stack of the project (infer from the codebase; do not introduce new frameworks unless strictly necessary and justified).
+- The `mcp.json` sample in the `deployment/` folder is the authoritative starting point for the schema — review it carefully before designing the updated schema.
+- All new code must follow the existing project's code style, package structure, and conventions
+- Always reuse the constants and place all the constants in common/constants package. 
+- Do not add unneccessary boiler code. Keep the code changes minimal. 
+- Do not distrub the existing flow. 
+- Always ask cross questions whenever multiple choices are available. 
+- Keep the documentation updated. 
+- Dont add or remove whitespaces. 
+- Follow the Hexagonal Pattern but do not create unneccessary complex classes. 

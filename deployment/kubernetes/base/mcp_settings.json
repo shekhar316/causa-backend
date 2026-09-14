@@ -1,0 +1,94 @@
+{
+  "mcpServers": {
+    "kubernetes": {
+      "type": "streamable-http",
+      "url": "http://kubernetes-mcp-server:8080/mcp",
+      "headers": {},
+      "platforms": ["cluster"],
+      "required": true,
+      "alwaysAllow": [
+        "pods_get",
+        "pods_log",
+        "events_list"
+      ]
+    },
+    "kruize": {
+      "type": "streamable-http",
+      "url": "http://kruize-mcp-server-service:8080/mcp/",
+      "headers": {},
+      "platforms": ["cluster"],
+      "required": true,
+      "alwaysAllow": [
+        "getCostOptimizedRecommendations",
+        "getPerformanceOptimizedRecommendations"
+      ]
+    },
+    "cryostat": {
+      "type": "streamable-http",
+      "url": "http://cryostat-mcp:8000/mcp",
+      "headers": {},
+      "platforms": ["cluster"],
+      "required": false,
+      "alwaysAllow": [
+        "get_gc_analysis",
+        "get_memory_analysis",
+        "get_thread_analysis",
+        "get_exception_analysis",
+        "get_container_analysis"
+      ]
+    },
+    "quarkus": {
+      "type": "streamable-http",
+      "url": "http://quarkus-mcp-server:8080/mcp",
+      "headers": {},
+      "platforms": ["cluster"],
+      "required": false,
+      "alwaysAllow": [
+        "fetch_raw_metrics_from_endpoint"
+      ]
+    },
+    "async-profiler": {
+      "type": "streamable-http",
+      "url": "http://async-profiler-mcp-server:8080/mcp",
+      "headers": {},
+      "platforms": ["cluster"],
+      "required": false,
+      "alwaysAllow": [
+        "list_profiled_pods",
+        "get_pod_jvm_status",
+        "get_jvm_statistics",
+        "get_recording",
+        "get_recording_report",
+        "get_jfr_summary",
+        "get_flame_graph"
+      ]
+    },
+    "filesystem": {
+      "type": "streamable-http",
+      "url": "http://filesystem-mcp-server:8080/mcp",
+      "headers": {},
+      "platforms": ["vm"],
+      "required": true,
+      "alwaysAllow": [
+        "list_directory_with_sizes",
+        "read_text_file"
+      ]
+    },
+    "jmx": {
+      "type": "streamable-http",
+      "url": "http://jmx-mcp-server:8080/mcp",
+      "headers": {},
+      "platforms": ["vm"],
+      "required": true,
+      "alwaysAllow": [
+        "getHeapStatus",
+        "getGcActivity",
+        "getThreadState",
+        "getGcPressureAnalysis",
+        "getMemoryLeakIndicators",
+        "getThreadContentionAnalysis",
+        "getJvmRuntimeInfo"
+      ]
+    }
+  }
+}

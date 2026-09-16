@@ -1,0 +1,78 @@
+name: Deploy Multi-Branch Website to GitHub Pages
+
+on:
+  push:
+    branches:
+      - '**' # Trigger on commit or merge to ANY branch (main, mvp_demo, feature/*, etc.)
+    paths:
+      - 'website/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'GETTING_STARTED.md'
+      - 'scripts/generate-docs-data.py'
+      - '.github/workflows/deploy-pages.yaml'
+  workflow_dispatch: # Allow manual trigger
+
+# Allow concurrent deployments for different branches, but cancel outdated in-progress runs on the same branch
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Extract branch name and sanitized slug
+        id: branch_info
+        run: |
+          RAW_BRANCH="${GITHUB_REF_NAME}"
+          # Replace slashes and special chars with hyphens for clean URLs
+          SAFE_BRANCH=$(echo "${RAW_BRANCH}" | tr '/' '-' | tr -cd 'a-zA-Z0-9_-' | tr '[:upper:]' '[:lower:]')
+          echo "raw_branch=${RAW_BRANCH}" >> $GITHUB_OUTPUT
+          echo "safe_branch=${SAFE_BRANCH}" >> $GITHUB_OUTPUT
+          echo "Building site for branch: ${RAW_BRANCH} (slug: ${SAFE_BRANCH})"
+
+      - name: Generate fresh docs data from branch markdown files
+        run: |
+          python3 scripts/generate-docs-data.py
+
+      - name: Prepare build artifact directory
+        run: |
+          mkdir -p dist_branch
+          cp -r website/* dist_branch/
+
+      - name: Deploy branch build to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist_branch
+          destination_dir: ${{ steps.branch_info.outputs.raw_branch == 'main' && '' || format('branch/{0}', steps.branch_info.outputs.safe_branch) }}
+          keep_files: true # Retain websites deployed from other branches
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Output Live Branch URL
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          RAW_BRANCH="${{ steps.branch_info.outputs.raw_branch }}"
+          SAFE_BRANCH="${{ steps.branch_info.outputs.safe_branch }}"
+          
+          if [ "${RAW_BRANCH}" = "main" ]; then
+            echo "🚀 Main site live at: https://${OWNER}.github.io/${REPO}/"
+          else
+            echo "🚀 Branch site live at: https://${OWNER}.github.io/${REPO}/branch/${SAFE_BRANCH}/"
+          fi

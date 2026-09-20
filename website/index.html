@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Causa AI — Autonomous Root Cause Analysis for JVM & Kubernetes</title>
+    <title>Causa</title>
     <meta name="description" content="AI-powered autonomous root cause analysis agent reducing MTTR for Java anomalies, OOMKills, and performance degradation in Kubernetes.">
     
     <!-- Google Fonts -->
@@ -91,47 +91,45 @@
 
     <!-- Navigation Bar -->
     <header class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#030712]/85 border-b border-white/5 transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <a href="#" class="flex items-center space-x-3 group">
-                <div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-causa-500 via-indigo-600 to-purple-600 p-[1px] shadow-lg shadow-causa-500/20 group-hover:shadow-causa-500/40 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <!-- Logo -->
+            <a href="#" class="flex items-center space-x-2.5 group shrink-0">
+                <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-causa-500 via-indigo-600 to-purple-600 p-[1px] shadow-lg shadow-causa-500/20 group-hover:shadow-causa-500/40 transition-all duration-300">
                     <div class="w-full h-full bg-[#070d1e] rounded-[11px] flex items-center justify-center">
                         <i data-lucide="cpu" class="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform"></i>
                     </div>
                 </div>
-                <div>
-                    <span class="text-2xl font-bold font-display tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">Causa</span>
-                    <span class="ml-1.5 px-2 py-0.5 text-[10px] font-mono tracking-wider font-semibold rounded-full bg-causa-500/20 text-causa-300 border border-causa-500/30 uppercase">Agent v1.0</span>
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-xl font-bold font-display tracking-tight text-white">Causa</span>
+                    <span class="px-1.5 py-0.5 text-[9px] font-mono tracking-wider font-semibold rounded-full bg-causa-500/20 text-causa-300 border border-causa-500/30 uppercase whitespace-nowrap">Agent v1.0</span>
                 </div>
             </a>
 
-            <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-300">
-                <a href="#how-it-works" class="hover:text-cyan-400 transition-colors">Architecture Flow</a>
-                <a href="#signals" class="hover:text-cyan-400 transition-colors">Telemetry Signals</a>
-                <a href="#playground" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Live RCA Demo
-                </a>
-                <a href="#benchmark" class="hover:text-cyan-400 transition-colors">MTTR Impact</a>
-                <a href="#docs-quickstart" class="hover:text-cyan-400 transition-colors">Quickstart</a>
-                
-                <!-- Open Documentation in a New Tab -->
-                <a href="docs.html" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-950/40 border border-cyan-800/40 transition-all hover:scale-105 hover:border-cyan-400/60 shadow-lg shadow-cyan-950/30">
-                    <i data-lucide="book-open" class="w-4 h-4"></i>
+            <!-- Nav links — hidden below lg, compact spacing -->
+            <nav class="hidden lg:flex items-center space-x-5 text-[13px] font-medium text-slate-300">
+                <a href="#how-it-works" class="hover:text-cyan-400 transition-colors whitespace-nowrap">Architecture Flow</a>
+                <a href="#signals" class="hover:text-cyan-400 transition-colors whitespace-nowrap">Telemetry Signals</a>
+                <a href="#benchmark" class="hover:text-cyan-400 transition-colors whitespace-nowrap">MTTR Impact</a>
+                <a href="#docs-quickstart" class="hover:text-cyan-400 transition-colors whitespace-nowrap">Quickstart</a>
+                <!-- Docs Hub -->
+                <a href="docs.html" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-950/40 border border-cyan-800/40 transition-all hover:scale-105 hover:border-cyan-400/60 whitespace-nowrap">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
                     <span class="font-medium">Docs Hub</span>
-                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-cyan-500"></i>
+                    <i data-lucide="external-link" class="w-3 h-3 text-cyan-500 shrink-0"></i>
                 </a>
             </nav>
 
-            <div class="flex items-center space-x-4">
-                <a href="https://github.com/causaai/causa" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-slate-200 transition-all hover:scale-105 active:scale-95">
-                    <i data-lucide="github" class="w-4 h-4"></i>
+            <!-- Right-side actions -->
+            <div class="flex items-center space-x-3 shrink-0">
+                <a href="https://github.com/causaai/causa" target="_blank" rel="noopener noreferrer" class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[13px] font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 whitespace-nowrap">
+                    <i data-lucide="github" class="w-4 h-4 shrink-0"></i>
                     <span>GitHub</span>
-                    <span class="text-xs bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-1">Star</span>
+                    <span class="text-[11px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Star</span>
                 </a>
-                <a href="#playground" class="relative group overflow-hidden px-5 py-2.5 rounded-lg font-semibold text-sm text-slate-900 bg-gradient-to-r from-cyan-400 via-teal-300 to-causa-400 hover:opacity-95 shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-cyan-400/40 hover:scale-105">
+                <a href="#playground" class="relative group overflow-hidden px-4 py-2 rounded-lg font-semibold text-[13px] text-slate-900 bg-gradient-to-r from-cyan-400 via-teal-300 to-causa-400 hover:opacity-95 shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-cyan-400/40 hover:scale-105 whitespace-nowrap">
                     <span class="relative z-10 flex items-center space-x-1.5">
-                        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                        <span>Test Live RCA</span>
+                        <i data-lucide="play" class="w-3.5 h-3.5 fill-current shrink-0"></i>
+                        <span>Simulate Live RCA</span>
                     </span>
                 </a>
             </div>
@@ -158,19 +156,18 @@
 
             <!-- Main Headline -->
             <h1 class="text-5xl sm:text-7xl lg:text-8xl font-extrabold font-display tracking-tight leading-[1.08] mb-8">
-                Autonomous <span class="bg-gradient-to-r from-cyan-400 via-causa-400 to-purple-500 bg-clip-text text-transparent drop-shadow-sm">Root Cause</span><br class="hidden sm:inline" />
-                Analysis for Java on K8s
+                Autonomous <span class="bg-gradient-to-r from-cyan-400 via-causa-400 to-purple-500 bg-clip-text text-transparent drop-shadow-sm">Root Cause</span><br class="hidden sm:inline" />Analysis Agent
             </h1>
 
             <p class="max-w-3xl mx-auto text-lg sm:text-xl text-slate-300 font-light leading-relaxed mb-10">
-                When Prometheus fires an alert, <span class="text-cyan-400 font-medium font-mono">Causa</span> orchestrates MCP servers across <span class="text-white font-medium">Kubernetes, Cryostat JFR & Kruize</span>, feeds rich telemetry into high-precision LLMs, and delivers verified fixes directly into your <span class="text-emerald-400 font-bold font-mono">Agentic IDE</span> in under <span class="text-emerald-400 font-bold font-mono">90 seconds</span>.
+                When a Prometheus Alertmanager alert is triggered, <span class="text-cyan-400 font-medium font-mono">Causa</span> automatically collects  <span class="text-white font-medium">production context </span> including application logs, pod health, Kubernetes events, and infrastructure insights via  <span class="text-white font-medium">MCP servers </span> and uses AI to identify the root cause. Within minutes, it delivers prioritized remediation steps, covering both immediate mitigation and long-term fixes, so engineers can resolve incidents faster with less manual investigation.
             </p>
 
             <!-- CTA Buttons -->
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-16">
                 <a href="#playground" class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-cyan-400 via-causa-300 to-purple-400 hover:brightness-110 shadow-xl shadow-cyan-500/25 transition-all flex items-center justify-center space-x-3 text-base group">
                     <i data-lucide="zap" class="w-5 h-5 text-slate-950 fill-current group-hover:scale-125 transition-transform"></i>
-                    <span>Launch Diagnostic Studio</span>
+                    <span>Simulate Diagnostic Studio</span>
                 </a>
                 
                 <!-- Open Documentation in a New Tab from Hero -->
@@ -185,20 +182,20 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
                 <div class="glass-panel p-5 rounded-2xl text-left relative overflow-hidden group">
                     <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-cyan-500/10 rounded-full blur-xl group-hover:bg-cyan-500/25 transition-all"></div>
-                    <div class="text-3xl font-extrabold font-mono text-cyan-400 mb-1">&lt; 90s</div>
+                    <div class="text-3xl font-extrabold font-mono text-cyan-400 mb-1">Minimize</div>
                     <div class="text-xs uppercase font-mono tracking-wider text-slate-400">Mean Time to Diagnose</div>
-                    <div class="text-[11px] text-slate-500 mt-1">vs. 3.5 hrs manual debugging</div>
+                    <div class="text-[11px] text-slate-500 mt-1">vs. hours of manual debugging</div>
                 </div>
                 <div class="glass-panel p-5 rounded-2xl text-left relative overflow-hidden group">
                     <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/25 transition-all"></div>
-                    <div class="text-3xl font-extrabold font-mono text-purple-400 mb-1">6+ Deep</div>
+                    <div class="text-3xl font-extrabold font-mono text-purple-400 mb-1">Deep</div>
                     <div class="text-xs uppercase font-mono tracking-wider text-slate-400">Telemetry Signals</div>
-                    <div class="text-[11px] text-slate-500 mt-1">Logs, Events, JFR, Kruize, Prom</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Logs, Events, JFR, Kruize, Metrics</div>
                 </div>
                 <div class="glass-panel p-5 rounded-2xl text-left relative overflow-hidden group">
                     <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/25 transition-all"></div>
-                    <div class="text-3xl font-extrabold font-mono text-emerald-400 mb-1">98.4%</div>
-                    <div class="text-xs uppercase font-mono tracking-wider text-slate-400">Root Cause Accuracy</div>
+                    <div class="text-3xl font-extrabold font-mono text-emerald-400 mb-1">Validate</div>
+                    <div class="text-xs uppercase font-mono tracking-wider text-slate-400">Dual Validation Layer For RCA</div>
                     <div class="text-[11px] text-slate-500 mt-1">Confidence-rated scoring</div>
                 </div>
                 <div class="glass-panel p-5 rounded-2xl text-left relative overflow-hidden group">
@@ -207,12 +204,6 @@
                     <div class="text-xs uppercase font-mono tracking-wider text-slate-400">Agentic Remediation</div>
                     <div class="text-[11px] text-slate-500 mt-1">Bob, Claude Code, Windsurf, Cursor</div>
                 </div>
-            </div>
-
-            <!-- 3D Scene Controls Hint -->
-            <div class="mt-8 text-xs font-mono text-slate-500 flex items-center justify-center gap-2">
-                <i data-lucide="orbit" class="w-3.5 h-3.5 text-cyan-400 animate-spin-slow"></i>
-                <span>Interactive 3D Cluster Mesh in Background: Drag or move mouse to rotate perspective</span>
             </div>
         </div>
     </section>
@@ -305,7 +296,7 @@
                             <h3 class="text-sm font-bold text-white">Causa Inbound Webhook</h3>
                         </div>
                         <p class="text-xs text-slate-400 leading-relaxed">
-                            Quarkus core spawns non-blocking diagnostic session and begins orchestration.
+                            Causa spawns non-blocking diagnostic session and begins orchestration.
                         </p>
                     </div>
 
@@ -317,10 +308,10 @@
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="layers" class="w-5 h-5 text-purple-400"></i>
-                            <h3 class="text-sm font-bold text-white">Parallel MCP Query</h3>
+                            <h3 class="text-sm font-bold text-white">Data Collection</h3>
                         </div>
                         <p class="text-xs text-slate-400 leading-relaxed">
-                            Queries Kubernetes MCP, Cryostat JFR MCP &amp; Kruize MCP in parallel for 6 telemetry streams.
+                            Queries Kubernetes MCP, Cryostat JFR MCP &amp; Kruize MCP for various telemetry streams.
                         </p>
                     </div>
 
@@ -332,10 +323,10 @@
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="brain-circuit" class="w-5 h-5 text-indigo-400"></i>
-                            <h3 class="text-sm font-bold text-white">LLM Context Reasoning</h3>
+                            <h3 class="text-sm font-bold text-white">LLM Reasoning & Skills</h3>
                         </div>
                         <p class="text-xs text-slate-400 leading-relaxed">
-                            Synthesizes YAML prompt templates into Claude / Granite with strict deterministic temperature.
+                            Causa analyzes all the collected context with specialized prompts and Skills
                         </p>
                     </div>
 
@@ -350,7 +341,7 @@
                             <h3 class="text-sm font-bold text-white">Root Cause Validation</h3>
                         </div>
                         <p class="text-xs text-slate-400 leading-relaxed">
-                            Correlates JFR Old Gen leak with Kernel dmesg logs and assigns confidence score (0.98).
+                            Correlates generated RCA with dedicated rules and performs LLM validation to assign confidence score.
                         </p>
                     </div>
 
@@ -365,7 +356,7 @@
                             <h3 class="text-sm font-bold text-white">Structured RCA Report</h3>
                         </div>
                         <p class="text-xs text-slate-400 leading-relaxed">
-                            Generates dual-tier plan: immediate <code class="text-cyan-300 font-mono text-[10px]">kubectl</code> patch + permanent architectural fix.
+                            Generates RCA with three solutions: immediate fix, validate steps and root cause fixes
                         </p>
                     </div>
 
@@ -380,7 +371,7 @@
                             <h3 class="text-sm font-bold text-white">Agentic IDE &amp; Fix Done</h3>
                         </div>
                         <p class="text-xs text-slate-400 leading-relaxed">
-                            Dispatches fix into Bob IDE, Claude Code, Cursor or Windsurf via Causa MCP skill. MTTR &lt; 90s!
+                            Engineer pastes RCA into Bob IDE, Claude Code, Cursor and via Causa MCP skills, resolves the issue.
                         </p>
                     </div>
 
@@ -677,10 +668,10 @@
                     <span>Full-Spectrum Visibility</span>
                 </div>
                 <h2 class="text-3xl sm:text-5xl font-bold font-display tracking-tight text-white">
-                    The 6 Core Diagnostic Signals
+                    The Core Diagnostic Signals
                 </h2>
                 <p class="text-slate-400 text-base mt-4">
-                    Causa does not guess from logs alone. It correlates 6 distinct production signals to pinpoint the exact failure mechanism.
+                    Causa does not guess from logs alone. It correlates distinct production signals to pinpoint the exact failure mechanism.
                 </p>
             </div>
 
@@ -692,9 +683,9 @@
                         <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-mono font-bold">
                             01
                         </div>
-                        <span class="text-xs font-mono text-slate-500">K8s API</span>
+                        <span class="text-xs font-mono text-slate-500">K8s MCP</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">Pod Status & Restarts</h3>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">Pod Status & Events</h3>
                     <p class="text-xs text-slate-400 leading-relaxed mb-4">
                         Extracts container restart count, exit codes (137, 143), phase transitions, and readiness probe flap history.
                     </p>
@@ -713,7 +704,7 @@
                     </div>
                     <h3 class="text-lg font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">Resource Utilization Metrics</h3>
                     <p class="text-xs text-slate-400 leading-relaxed mb-4">
-                        Pulls real-time CPU throttles, memory working set, RSS, swap, and buffer headroom trends leading up to incident.
+                        Pulls real-time metrics and fetches trends leading up to incident.
                     </p>
                     <div class="p-2.5 rounded-lg bg-slate-950 font-mono text-[11px] text-purple-400/90 border border-white/5">
                         container_memory_working_set_bytes
@@ -728,7 +719,7 @@
                         </div>
                         <span class="text-xs font-mono text-slate-500">Stream Logs</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-amber-300 transition-colors">Application Exception Logs</h3>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-amber-300 transition-colors">Application Logs</h3>
                     <p class="text-xs text-slate-400 leading-relaxed mb-4">
                         Detects Java stack traces, OutOfMemoryError, DirectMemory limits, socket leaks, and fatal framework aborts.
                     </p>
@@ -743,14 +734,14 @@
                         <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-mono font-bold">
                             04
                         </div>
-                        <span class="text-xs font-mono text-slate-500">K8s Events</span>
+                        <span class="text-xs font-mono text-slate-500">Framework Specific MCP</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-rose-300 transition-colors">Kubernetes Kernel Events</h3>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-rose-300 transition-colors">Custom MCPs/ Quarkus</h3>
                     <p class="text-xs text-slate-400 leading-relaxed mb-4">
-                        Inspects cgroup notifications, eviction warnings, node pressure, and BackOff/CrashLoopBackOff alerts.
+                        Collects data from custom mcps such as quarkus mcp server. 
                     </p>
                     <div class="p-2.5 rounded-lg bg-slate-950 font-mono text-[11px] text-rose-400/90 border border-white/5">
-                        Reason: OOMKilled / Evicted
+                        jvm_total_memory_used
                     </div>
                 </div>
 
@@ -760,9 +751,9 @@
                         <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center font-mono font-bold">
                             05
                         </div>
-                        <span class="text-xs font-mono text-slate-500">Cryostat MCP</span>
+                        <span class="text-xs font-mono text-slate-500">Jafra MCP</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-orange-300 transition-colors">Cryostat JFR Deep Profiling</h3>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-orange-300 transition-colors">Jafra Deep Profiling</h3>
                     <p class="text-xs text-slate-400 leading-relaxed mb-4">
                         Analyzes GC pause distributions (G1, ZGC, Shenandoah), Tenured Generation trends, thread allocations & parked locks.
                     </p>
@@ -871,8 +862,9 @@
             <!-- Code Snippet Tabs -->
             <div class="max-w-4xl mx-auto glass-panel rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
                 <div class="bg-slate-900/90 border-b border-white/10 px-6 py-3 flex items-center justify-between">
-                    <div class="flex space-x-2" id="code-tabs">
-                        <button data-tab="dev" class="code-tab active-code-tab px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-white bg-slate-800">Quarkus Dev Mode</button>
+                    <div class="flex space-x-2 flex-wrap gap-y-1" id="code-tabs">
+                        <button data-tab="demos" class="code-tab active-code-tab px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-white bg-slate-800">Causa Demos</button>
+                        <button data-tab="dev" class="code-tab px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-slate-400 hover:text-white">Quarkus Dev Mode</button>
                         <button data-tab="webhook" class="code-tab px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-slate-400 hover:text-white">Alertmanager Config</button>
                         <button data-tab="curl" class="code-tab px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-slate-400 hover:text-white">Trigger RCA via cURL</button>
                     </div>
@@ -883,15 +875,12 @@
                 </div>
                 <div class="p-6 bg-[#070b14] font-mono text-xs overflow-x-auto">
                     <pre id="code-display" class="text-slate-300 leading-relaxed">
-<span class="text-slate-500"># 1. Clone repository</span>
-<span class="text-cyan-400">git clone</span> https://github.com/causaai/causa.git
-<span class="text-cyan-400">cd</span> causa-backend
+<span class="text-slate-500"># 1. Clone Causa Demos repository</span>
+<span class="text-cyan-400">git clone</span> https://github.com/causaai/causa-demos.git
+<span class="text-cyan-400">cd</span> causa-demos/kind
 
-<span class="text-slate-500"># 2. Run Quarkus in Live-Reload Dev Mode</span>
-<span class="text-emerald-400">./mvnw compile quarkus:dev</span>
-
-<span class="text-slate-500"># Dev UI is live at: http://localhost:8080/q/dev/
-# Health Check: http://localhost:8080/api/v1/healthz</span></pre>
+<span class="text-slate-500"># 2. Run the demo setup script (spins up a local Kind cluster)</span>
+<span class="text-emerald-400">./demo.sh</span></pre>
                 </div>
             </div>
         </div>

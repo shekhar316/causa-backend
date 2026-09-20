@@ -348,6 +348,13 @@ function loadScenario(key, animate = false) {
 // 3. Code Snippet Tabs Controller
 // ==========================================
 const codeSnippets = {
+    demos: `<span class="text-slate-500"># 1. Clone Causa Demos repository</span>
+<span class="text-cyan-400">git clone</span> https://github.com/causaai/causa-demos.git
+<span class="text-cyan-400">cd</span> causa-demos/kind
+
+<span class="text-slate-500"># 2. Run the demo setup script (spins up a local Kind cluster)</span>
+<span class="text-emerald-400">./demo.sh</span>`,
+
     dev: `<span class="text-slate-500"># 1. Clone Causa repository</span>
 <span class="text-cyan-400">git clone</span> https://github.com/causaai/causa.git
 <span class="text-cyan-400">cd</span> causa-backend
@@ -390,7 +397,7 @@ function initCodeTabs() {
     const display = document.getElementById('code-display');
     const copyBtn = document.getElementById('copy-code-btn');
 
-    let currentTab = 'dev';
+    let currentTab = 'demos';
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {

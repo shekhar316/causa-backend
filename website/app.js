@@ -8,18 +8,43 @@ document.addEventListener('DOMContentLoaded', () => {
         window.lucide.createIcons();
     }
 
-    // 2. Initialize 3D WebGL Hero Canvas using Three.js
+    // 2. Initialize Theme Toggle
+    initThemeToggle();
+
+    // 3. Initialize 3D WebGL Hero Canvas using Three.js
     initThreeDHero();
 
-    // 3. Initialize Interactive Scenario Simulator
+    // 4. Initialize Interactive Scenario Simulator
     initScenarioSimulator();
 
-    // 4. Initialize Code Snippet Tabs
+    // 5. Initialize Code Snippet Tabs
     initCodeTabs();
 
-    // 5. Initialize Live Animated Architecture Pipeline Flow
+    // 6. Initialize Live Animated Architecture Pipeline Flow
     initArchitectureFlowAnimation();
 });
+
+// ==========================================
+// Theme Toggle (dark ⇔ light)
+// ==========================================
+function initThemeToggle() {
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    // Restore persisted preference; default to dark
+    const saved = localStorage.getItem('causa-theme');
+    if (saved === 'light') {
+        html.classList.remove('dark');
+    } else {
+        html.classList.add('dark');
+    }
+
+    btn.addEventListener('click', () => {
+        const isDark = html.classList.toggle('dark');
+        localStorage.setItem('causa-theme', isDark ? 'dark' : 'light');
+    });
+}
 
 // ==========================================
 // 1. Three.js 3D Neural Cluster & Node Mesh
@@ -56,7 +81,7 @@ function initThreeDHero() {
         const material = new THREE.MeshBasicMaterial({
             color: colors[Math.floor(Math.random() * colors.length)],
             transparent: true,
-            opacity: 0.85
+            opacity: 0.48
         });
         const mesh = new THREE.Mesh(geometry, material);
         
@@ -86,7 +111,7 @@ function initThreeDHero() {
     const lineMaterial = new THREE.LineBasicMaterial({
         color: 0x38bdf8,
         transparent: true,
-        opacity: 0.18
+        opacity: 0.11
     });
 
     const linesGeometry = new THREE.BufferGeometry();
@@ -115,7 +140,7 @@ function initThreeDHero() {
         color: 0x00f2ff,
         wireframe: true,
         transparent: true,
-        opacity: 0.35
+        opacity: 0.20
     });
     const coreMesh = new THREE.Mesh(coreGeo, coreMat);
     networkGroup.add(coreMesh);

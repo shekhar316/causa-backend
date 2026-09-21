@@ -7,8 +7,31 @@ document.addEventListener('DOMContentLoaded', () => {
         window.lucide.createIcons();
     }
 
+    initDocsThemeToggle();
     initDocsPage();
 });
+
+// ==========================================
+// Theme Toggle (dark ⇔ light) — Docs page
+// ==========================================
+function initDocsThemeToggle() {
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    // Restore persisted preference; default to dark
+    const saved = localStorage.getItem('causa-theme');
+    if (saved === 'light') {
+        html.classList.remove('dark');
+    } else {
+        html.classList.add('dark');
+    }
+
+    btn.addEventListener('click', () => {
+        const isDark = html.classList.toggle('dark');
+        localStorage.setItem('causa-theme', isDark ? 'dark' : 'light');
+    });
+}
 
 function initDocsPage() {
     const sidebarNav = document.getElementById('docs-sidebar-nav');

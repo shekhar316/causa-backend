@@ -121,6 +121,12 @@
 
             <!-- Right-side actions -->
             <div class="flex items-center space-x-3 shrink-0">
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" aria-label="Toggle theme" title="Toggle light / dark"
+                    class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-all hover:scale-105 active:scale-95">
+                    <i data-lucide="sun" class="w-4 h-4 hidden dark-hidden theme-icon-light"></i>
+                    <i data-lucide="moon" class="w-4 h-4 theme-icon-dark"></i>
+                </button>
                 <a href="https://github.com/causaai/causa" target="_blank" rel="noopener noreferrer" class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[13px] font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 whitespace-nowrap">
                     <i data-lucide="github" class="w-4 h-4 shrink-0"></i>
                     <span>GitHub</span>
@@ -259,7 +265,7 @@
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-rose-500/40 relative cursor-pointer group" data-step="0">
                         <div class="flex items-center justify-between mb-3">
                             <span class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-mono font-bold text-xs border border-rose-500/30">01</span>
-                            <span class="text-[10px] font-mono text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">Exit 137</span>
+                            <span class="text-[10px] font-mono font-bold text-rose-400 bg-rose-500/25 px-2 py-0.5 rounded">Exit 137</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="skull" class="w-5 h-5 text-rose-400"></i>
@@ -274,7 +280,7 @@
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-white/10 relative cursor-pointer group" data-step="1">
                         <div class="flex items-center justify-between mb-3">
                             <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-mono font-bold text-xs border border-amber-500/30">02</span>
-                            <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Alert Fired</span>
+                            <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/25 px-2 py-0.5 rounded">Alert Fired</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="bell-ring" class="w-5 h-5 text-amber-400"></i>
@@ -289,7 +295,7 @@
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-white/10 relative cursor-pointer group" data-step="2">
                         <div class="flex items-center justify-between mb-3">
                             <span class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-mono font-bold text-xs border border-cyan-500/30">03</span>
-                            <span class="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">Ingested</span>
+                            <span class="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-500/25 px-2 py-0.5 rounded">Ingested</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="radio" class="w-5 h-5 text-cyan-400"></i>
@@ -304,7 +310,7 @@
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-white/10 relative cursor-pointer group" data-step="3">
                         <div class="flex items-center justify-between mb-3">
                             <span class="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-mono font-bold text-xs border border-purple-500/30">04</span>
-                            <span class="text-[10px] font-mono text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">MCP JSON-RPC</span>
+                            <span class="text-[10px] font-mono font-bold text-purple-400 bg-purple-500/25 px-2 py-0.5 rounded">MCP JSON-RPC</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="layers" class="w-5 h-5 text-purple-400"></i>
@@ -318,11 +324,11 @@
                     <!-- Node 5: LLM Reasoning & Thinking -->
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-white/10 relative cursor-pointer group" data-step="4">
                         <div class="flex items-center justify-between mb-3">
-                            <span class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-mono font-bold text-xs border border-indigo-500/30">05</span>
-                            <span class="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Deep Thinking</span>
+                            <span class="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-mono font-bold text-xs border border-purple-500/30">05</span>
+                            <span class="text-[10px] font-mono font-bold text-purple-400 bg-purple-500/25 px-2 py-0.5 rounded">Deep Thinking</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
-                            <i data-lucide="brain-circuit" class="w-5 h-5 text-indigo-400"></i>
+                            <i data-lucide="brain-circuit" class="w-5 h-5 text-purple-400"></i>
                             <h3 class="text-sm font-bold text-white">LLM Reasoning & Skills</h3>
                         </div>
                         <p class="text-xs text-slate-400 leading-relaxed">
@@ -334,7 +340,7 @@
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-white/10 relative cursor-pointer group" data-step="5">
                         <div class="flex items-center justify-between mb-3">
                             <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-mono font-bold text-xs border border-amber-500/30">06</span>
-                            <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Corroborated</span>
+                            <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/25 px-2 py-0.5 rounded">Corroborated</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="shield-alert" class="w-5 h-5 text-amber-400"></i>
@@ -349,7 +355,7 @@
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-white/10 relative cursor-pointer group" data-step="6">
                         <div class="flex items-center justify-between mb-3">
                             <span class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-mono font-bold text-xs border border-cyan-500/30">07</span>
-                            <span class="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">RCA JSON</span>
+                            <span class="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-500/25 px-2 py-0.5 rounded">RCA JSON</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="file-check-2" class="w-5 h-5 text-cyan-400"></i>
@@ -364,7 +370,7 @@
                     <div class="flow-step-card p-5 rounded-2xl bg-slate-900/90 border border-emerald-500/40 relative cursor-pointer group" data-step="7">
                         <div class="flex items-center justify-between mb-3">
                             <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-mono font-bold text-xs border border-emerald-500/30">08</span>
-                            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Fix Applied</span>
+                            <span class="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/25 px-2 py-0.5 rounded">Fix Applied</span>
                         </div>
                         <div class="flex items-center space-x-2 mb-2">
                             <i data-lucide="sparkles" class="w-5 h-5 text-emerald-400"></i>
@@ -441,7 +447,7 @@
                                 <i data-lucide="bell-ring" class="w-4 h-4 text-rose-400 animate-bounce"></i>
                                 <span class="text-xs font-mono font-bold text-white uppercase tracking-wider">Inbound Prometheus Alert</span>
                             </div>
-                            <span id="alert-status-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">CRITICAL</span>
+                            <span id="alert-status-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/30 text-rose-300 border border-rose-500/40">CRITICAL</span>
                         </div>
                         
                         <div class="space-y-2 text-xs font-mono">
@@ -477,7 +483,7 @@
                                 <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
                                 <span class="text-xs font-mono font-bold text-white uppercase tracking-wider">MCP Diagnostic Streams</span>
                             </div>
-                            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">6 Connected</span>
+                            <span class="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/25 px-2 py-0.5 rounded border border-emerald-500/30">6 Connected</span>
                         </div>
 
                         <div class="space-y-2.5" id="telemetry-signals-list">
@@ -814,7 +820,7 @@
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="p-6 font-semibold text-white">Alert Ingestion & Triage</td>
                                 <td class="p-6 text-slate-400">Engineer wakes up, checks Slack, manually finds target namespace & pod</td>
-                                <td class="p-6 text-slate-200 bg-cyan-950/10 font-medium"><span class="text-cyan-400 font-mono font-bold">Instant</span> webhook trigger automatically creates diagnostic session</td>
+                                <td class="p-6 text-slate-200 bg-cyan-950/10 font-medium"><span class="text-purple-400 font-mono font-bold">Instant</span> webhook trigger automatically creates diagnostic session</td>
                             </tr>
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="p-6 font-semibold text-white">Telemetry Gathering</td>

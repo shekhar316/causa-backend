@@ -819,8 +819,10 @@
                         <tbody class="divide-y divide-white/5 font-sans">
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="p-6 font-semibold text-white">Alert Ingestion & Triage</td>
-                                <td class="p-6 text-slate-400">Engineer wakes up, checks Slack, manually finds target namespace & pod</td>
-                                <td class="p-6 text-slate-200 bg-cyan-950/10 font-medium"><span class="text-purple-400 font-mono font-bold">Instant</span> webhook trigger automatically creates diagnostic session</td>
+                                <td class="p-6 text-slate-400">Manually hunts through kubectl and Grafana to find the right namespace and pod</td>
+                                <td class="p-6 text-slate-200 bg-cyan-950/10 font-medium">
+                                    <span class="text-purple-400 font-mono font-bold">Instant</span> webhook triggers a full diagnostic session — Causa pushes a structured Slack summary with namespace, pod, anomaly type, confidence score, root cause, and top remediation command <span class="text-cyan-400 font-mono font-bold">directly to the on-call channel before the engineer opens their laptop</span>
+                                </td>
                             </tr>
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="p-6 font-semibold text-white">Telemetry Gathering</td>
